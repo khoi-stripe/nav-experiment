@@ -1,13 +1,25 @@
 // Dashboard functionality with account-specific sandbox management
 class Dashboard {
     constructor() {
+        // Initialize properties
         this.currentOpenPanel = null;
         this.previousNavPanelState = null;
-        this.panels = document.querySelectorAll('.nav-panel');
         this.currentActiveAccount = null;
+        
+        // Cache frequently accessed DOM elements
+        this._domCache = {};
+        this._initDOMCache();
+        
+        // Debounce timers
+        this._debounceTimers = {};
+        
+        // Data initialization
         this.accountSandboxes = this.loadAccountSandboxes();
         this.organizationSandboxes = this.loadOrganizationSandboxes();
         this.organizationAccounts = this.getOrganizationAccounts();
+        
+        // Performance optimization: reduce logging in production
+        this.debugMode = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         
         // Clean up any broken organization sandboxes on startup
         this.cleanupBrokenOrganizationSandboxes();
@@ -15,9 +27,63 @@ class Dashboard {
         this.init();
     }
 
+    // Cache DOM elements to avoid repeated queries
+    _initDOMCache() {
+        // Initialize cache, but allow for elements that might not exist yet
+        this._domCache.container = document.getElementById('sandbox-list');
+        this._domCache.popoverContent = document.getElementById('sandbox-popover-content');
+        this._domCache.activeAccount = document.getElementById('active-account');
+        this._domCache.accountSwitcherText = document.getElementById('accountSwitcherText');
+        
+        // Log cache status in debug mode
+        this._log('log', 'DOM Cache initialized:', {
+            container: !!this._domCache.container,
+            popoverContent: !!this._domCache.popoverContent,
+            activeAccount: !!this._domCache.activeAccount,
+            accountSwitcherText: !!this._domCache.accountSwitcherText
+        });
+    }
+
+    // Helper method to refresh DOM cache if needed
+    _refreshDOMCache() {
+        if (!this._domCache.container) {
+            this._domCache.container = document.getElementById('sandbox-list');
+        }
+        if (!this._domCache.popoverContent) {
+            this._domCache.popoverContent = document.getElementById('sandbox-popover-content');
+        }
+        if (!this._domCache.activeAccount) {
+            this._domCache.activeAccount = document.getElementById('active-account');
+        }
+        if (!this._domCache.accountSwitcherText) {
+            this._domCache.accountSwitcherText = document.getElementById('accountSwitcherText');
+        }
+    }
+
+    // Optimized logging - only log in debug mode
+    _log(level, ...args) {
+        if (this.debugMode) {
+            console[level](...args);
+        }
+    }
+
+    // Debounce utility for expensive operations
+    _debounce(key, func, delay = 100) {
+        if (this._debounceTimers[key]) {
+            clearTimeout(this._debounceTimers[key]);
+        }
+        this._debounceTimers[key] = setTimeout(() => {
+            func();
+            delete this._debounceTimers[key];
+        }, delay);
+    }
+
     init() {
+        // Get panels on demand
+        const panels = document.querySelectorAll('.nav-panel');
+        
         // Add event listeners for panel toggles
-        this.panels.forEach(panel => {
+        panels.forEach(panel => {
             const toggle = panel.querySelector('.panel-toggle');
             if (toggle) {
                 toggle.addEventListener('click', (e) => {
@@ -44,9 +110,24 @@ class Dashboard {
         // Initialize account tracking
         this.initializeAccountTracking();
         
+        // Force immediate sandbox update after initialization
+        if (this.currentActiveAccount) {
+            // Use setTimeout to ensure DOM is ready
+            setTimeout(() => {
+                this.forceUpdateSandboxes(this.currentActiveAccount);
+            }, 100);
+        }
+        
         // Expose debugging functions globally
         window.debugSandboxes = () => this.debugSandboxStorage();
         window.clearSandboxes = () => this.clearAllSandboxData();
+    }
+
+    // Clean up timers and resources
+    cleanup() {
+        // Clear all debounce timers
+        Object.values(this._debounceTimers).forEach(timer => clearTimeout(timer));
+        this._debounceTimers = {};
     }
 
     // Get organization accounts mapping
@@ -73,7 +154,7 @@ class Dashboard {
 
     // Initialize account tracking and sandbox management
     initializeAccountTracking() {
-        const activeAccount = document.getElementById('active-account');
+        const activeAccount = this._domCache.activeAccount;
         if (activeAccount) {
             this.currentActiveAccount = activeAccount.dataset.accountName;
             this.updateSandboxesForAccount(this.currentActiveAccount);
@@ -87,7 +168,7 @@ class Dashboard {
                     if (newAccount !== this.currentActiveAccount) {
                         const previousAccount = this.currentActiveAccount;
                         this.currentActiveAccount = newAccount;
-                        console.log('Account switched from:', previousAccount, 'to:', newAccount);
+                        this._log('log', 'Account switched from:', previousAccount, 'to:', newAccount);
                         
                         // Validate sandbox isolation
                         this.validateSandboxIsolation(previousAccount, newAccount);
@@ -106,37 +187,57 @@ class Dashboard {
         }
     }
 
-    // Load account sandboxes from localStorage
-    loadAccountSandboxes() {
-        const stored = localStorage.getItem('accountSandboxes');
-        return stored ? JSON.parse(stored) : {};
-    }
-
-    // Load organization sandboxes from localStorage
-    loadOrganizationSandboxes() {
-        const stored = localStorage.getItem('organizationSandboxes');
-        return stored ? JSON.parse(stored) : {};
-    }
-
-    // Save account sandboxes to localStorage
+    // Optimized storage methods with batching
     saveAccountSandboxes() {
-        localStorage.setItem('accountSandboxes', JSON.stringify(this.accountSandboxes));
+        this._debounce('saveAccount', () => {
+            try {
+                localStorage.setItem('accountSandboxes', JSON.stringify(this.accountSandboxes));
+            } catch (e) {
+                this._log('error', 'Failed to save account sandboxes to localStorage:', e);
+            }
+        }, 200);
     }
 
-    // Save organization sandboxes to localStorage
     saveOrganizationSandboxes() {
-        localStorage.setItem('organizationSandboxes', JSON.stringify(this.organizationSandboxes));
+        this._debounce('saveOrg', () => {
+            try {
+                localStorage.setItem('organizationSandboxes', JSON.stringify(this.organizationSandboxes));
+            } catch (e) {
+                this._log('error', 'Failed to save organization sandboxes to localStorage:', e);
+            }
+        }, 200);
+    }
+
+    // Optimized loading with error handling
+    loadAccountSandboxes() {
+        try {
+            const saved = localStorage.getItem('accountSandboxes');
+            return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+            this._log('error', 'Failed to load account sandboxes from localStorage:', e);
+            return {};
+        }
+    }
+
+    loadOrganizationSandboxes() {
+        try {
+            const saved = localStorage.getItem('organizationSandboxes');
+            return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+            this._log('error', 'Failed to load organization sandboxes from localStorage:', e);
+            return {};
+        }
     }
 
     // Debug function to inspect sandbox storage
     debugSandboxStorage() {
-        console.log('=== SANDBOX STORAGE DEBUG ===');
-        console.log('Current Active Account:', this.currentActiveAccount);
-        console.log('Account Sandboxes:', JSON.stringify(this.accountSandboxes, null, 2));
-        console.log('Organization Sandboxes:', JSON.stringify(this.organizationSandboxes, null, 2));
-        console.log('LocalStorage accountSandboxes:', localStorage.getItem('accountSandboxes'));
-        console.log('LocalStorage organizationSandboxes:', localStorage.getItem('organizationSandboxes'));
-        console.log('=== END DEBUG ===');
+        this._log('log', '=== SANDBOX STORAGE DEBUG ===');
+        this._log('log', 'Current Active Account:', this.currentActiveAccount);
+        this._log('log', 'Account Sandboxes:', JSON.stringify(this.accountSandboxes, null, 2));
+        this._log('log', 'Organization Sandboxes:', JSON.stringify(this.organizationSandboxes, null, 2));
+        this._log('log', 'LocalStorage accountSandboxes:', localStorage.getItem('accountSandboxes'));
+        this._log('log', 'LocalStorage organizationSandboxes:', localStorage.getItem('organizationSandboxes'));
+        this._log('log', '=== END DEBUG ===');
     }
 
     // Clear all sandbox data (for debugging)
@@ -145,13 +246,13 @@ class Dashboard {
         this.organizationSandboxes = {};
         localStorage.removeItem('accountSandboxes');
         localStorage.removeItem('organizationSandboxes');
-        console.log('All sandbox data cleared');
+        this._log('log', 'All sandbox data cleared');
         this.updateSandboxesForAccount(this.currentActiveAccount);
     }
 
     // Clean up broken organization sandboxes with undefined organizationId
     cleanupBrokenOrganizationSandboxes() {
-        console.log('🧹 Cleaning up broken organization sandboxes...');
+        this._log('log', '🧹 Cleaning up broken organization sandboxes...');
         
         let cleanupCount = 0;
         const brokenKeys = [];
@@ -161,7 +262,7 @@ class Dashboard {
             if (!orgId || orgId === 'undefined' || orgId === 'null') {
                 brokenKeys.push(orgId);
                 const brokenSandboxes = this.organizationSandboxes[orgId];
-                console.log(`🗑️  Found ${brokenSandboxes.length} broken sandboxes with invalid orgId: "${orgId}"`);
+                this._log('warn', `🗑️  Found ${brokenSandboxes.length} broken sandboxes with invalid orgId: "${orgId}"`);
                 cleanupCount += brokenSandboxes.length;
             }
         });
@@ -173,158 +274,113 @@ class Dashboard {
         
         if (cleanupCount > 0) {
             this.saveOrganizationSandboxes();
-            console.log(`✅ Cleaned up ${cleanupCount} broken organization sandboxes`);
+            this._log('log', `✅ Cleaned up ${cleanupCount} broken organization sandboxes`);
             this.updateSandboxesForAccount(this.currentActiveAccount);
         } else {
-            console.log('✅ No broken organization sandboxes found');
+            this._log('log', '✅ No broken organization sandboxes found');
         }
         
         return cleanupCount;
     }
 
-    // Validate that sandbox isolation is working correctly
+    // Optimized validation with reduced logging
     validateSandboxIsolation(previousAccount, newAccount) {
-        if (!previousAccount || !newAccount) return;
+        if (!previousAccount || !newAccount || !this.debugMode) return;
         
         const previousSandboxes = this.accountSandboxes[previousAccount] || [];
         const newSandboxes = this.accountSandboxes[newAccount] || [];
         
-        console.log('=== SANDBOX ISOLATION VALIDATION ===');
-        console.log('Previous business account:', previousAccount, 'has', previousSandboxes.length, 'sandboxes');
-        console.log('New business account:', newAccount, 'has', newSandboxes.length, 'sandboxes');
+        this._log('log', '=== SANDBOX ISOLATION VALIDATION ===');
+        this._log('log', `Previous: ${previousAccount} (${previousSandboxes.length}), New: ${newAccount} (${newSandboxes.length})`);
         
-        // Check if sandbox arrays are different references
-        if (previousSandboxes === newSandboxes) {
-            console.error('🚨 SANDBOX ISOLATION BROKEN: Same sandbox array reference!');
-            console.error('Previous:', previousSandboxes);
-            console.error('New:', newSandboxes);
+        // Quick validation checks
+        const isolationBroken = previousSandboxes === newSandboxes;
+        const invalidPrevious = previousSandboxes.filter(s => s.account && s.account !== previousAccount);
+        const invalidNew = newSandboxes.filter(s => s.account && s.account !== newAccount);
+        
+        if (isolationBroken) {
+            this._log('error', '🚨 SANDBOX ISOLATION BROKEN: Same array reference!');
+        } else if (invalidPrevious.length || invalidNew.length) {
+            this._log('error', '🚨 BUSINESS ACCOUNT ISOLATION BROKEN');
         } else {
-            console.log('✅ Sandbox isolation working - different array references');
+            this._log('log', '✅ Sandbox isolation working correctly');
         }
         
-        // Check for business account-specific sandbox naming
-        const previousAccountSpecific = previousSandboxes.filter(s => s.account === previousAccount);
-        const newAccountSpecific = newSandboxes.filter(s => s.account === newAccount);
-        
-        console.log('Previous account-specific sandboxes:', previousAccountSpecific.length);
-        console.log('New account-specific sandboxes:', newAccountSpecific.length);
-        
-        // Check if sandbox contents are improperly shared between business accounts
-        const previousNames = previousSandboxes.map(s => s.name);
-        const newNames = newSandboxes.map(s => s.name);
-        const sharedNames = previousNames.filter(name => newNames.includes(name));
-        
-        if (sharedNames.length > 0) {
-            console.warn('⚠️  Potentially shared sandbox names between business accounts:', sharedNames);
-        }
-        
-        // Validate that each business account only sees its own sandboxes
-        const invalidPreviousSandboxes = previousSandboxes.filter(s => s.account && s.account !== previousAccount);
-        const invalidNewSandboxes = newSandboxes.filter(s => s.account && s.account !== newAccount);
-        
-        if (invalidPreviousSandboxes.length > 0) {
-            console.error('🚨 BUSINESS ACCOUNT ISOLATION BROKEN: Previous account sees sandboxes from other accounts:', invalidPreviousSandboxes);
-        }
-        
-        if (invalidNewSandboxes.length > 0) {
-            console.error('🚨 BUSINESS ACCOUNT ISOLATION BROKEN: New account sees sandboxes from other accounts:', invalidNewSandboxes);
-        }
-        
-        if (invalidPreviousSandboxes.length === 0 && invalidNewSandboxes.length === 0) {
-            console.log('✅ Business account isolation working correctly');
-        }
-        
-        console.log('=== END VALIDATION ===');
+        this._log('log', '=== END VALIDATION ===');
     }
 
     // Get sandboxes for a specific account
     getSandboxesForAccount(accountName) {
         if (!accountName) {
-            console.error('🚨 getSandboxesForAccount called with empty accountName');
+            this._log('error', '🚨 getSandboxesForAccount called with empty accountName');
             return [];
         }
         
-        console.log(`🔍 Getting sandboxes for account: "${accountName}"`);
+        this._log('log', `🔍 Getting sandboxes for account: "${accountName}"`);
         
         if (!this.accountSandboxes[accountName]) {
-            console.log(`📦 No existing sandboxes found for "${accountName}", creating defaults...`);
+            this._log('log', `📦 No existing sandboxes found for "${accountName}", creating defaults...`);
             // Initialize with default sandboxes for new accounts
             this.accountSandboxes[accountName] = this.getDefaultSandboxes(accountName);
             this.saveAccountSandboxes();
-            console.log(`✅ Created ${this.accountSandboxes[accountName].length} default sandboxes for "${accountName}"`);
+            this._log('log', `✅ Created ${this.accountSandboxes[accountName].length} default sandboxes for "${accountName}"`);
         }
         
         const sandboxes = this.accountSandboxes[accountName];
-        console.log(`📦 Returning ${sandboxes.length} sandboxes for "${accountName}":`, sandboxes.map(s => s.name));
+        this._log('log', `📦 Returning ${sandboxes.length} sandboxes for "${accountName}":`, sandboxes.map(s => s.name));
         return sandboxes;
     }
 
     // Get organization sandboxes for a specific organization
     getOrganizationSandboxesForOrganization(organizationId) {
         if (!organizationId || organizationId === 'undefined' || organizationId === 'null') {
-            console.error('🚨 getOrganizationSandboxesForOrganization called with invalid organizationId:', organizationId);
+            this._log('error', '🚨 getOrganizationSandboxesForOrganization called with invalid organizationId:', organizationId);
             return []; // Return empty array for invalid org IDs
         }
         
-        console.log(`🔍 Getting organization sandboxes for organization: "${organizationId}"`);
+        this._log('log', `🔍 Getting organization sandboxes for organization: "${organizationId}"`);
         
         if (!this.organizationSandboxes[organizationId]) {
-            console.log(`📦 No existing organization sandboxes found for "${organizationId}", creating defaults...`);
+            this._log('log', `📦 No existing organization sandboxes found for "${organizationId}", creating defaults...`);
             // Initialize with default organization sandboxes
             this.organizationSandboxes[organizationId] = this.getDefaultOrganizationSandboxes(organizationId);
             this.saveOrganizationSandboxes();
-            console.log(`✅ Created organization sandboxes for "${organizationId}"`);
+            this._log('log', `✅ Created organization sandboxes for "${organizationId}"`);
         }
         
         const sandboxes = this.organizationSandboxes[organizationId];
-        console.log(`📦 Returning ${sandboxes.length} organization sandboxes for "${organizationId}"`);
+        this._log('log', `📦 Returning ${sandboxes.length} organization sandboxes for "${organizationId}"`);
         return sandboxes;
     }
 
-    // Get default sandboxes for an account
+    // Optimized default sandbox creation with reduced redundancy
     getDefaultSandboxes(accountName) {
-        // Create unique sandbox names with timestamp to ensure distinctness
+        if (!accountName) return [];
+        
         const timestamp = new Date().getTime();
         const accountSlug = this.createAccountSlug(accountName);
         
-        return [
-            {
-                name: `${accountName} Development Environment`,
-                type: 'account',
-                organization: null,
-                account: accountName,
-                created: new Date().toISOString(),
-                lastUsed: null,
-                id: `${accountSlug}-dev-${timestamp}`, // Unique identifier with clean slug
-                description: `Development sandbox for ${accountName} - safe testing environment`
-            },
-            {
-                name: `${accountName} Staging Environment`,
-                type: 'account',
-                organization: null,
-                account: accountName,
-                created: new Date().toISOString(),
-                lastUsed: null,
-                id: `${accountSlug}-staging-${timestamp}`, // Unique identifier with clean slug
-                description: `Staging sandbox for ${accountName} - pre-production testing`
-            },
-            {
-                name: `${accountName} QA Testing`,
-                type: 'account',
-                organization: null,
-                account: accountName,
-                created: new Date().toISOString(),
-                lastUsed: null,
-                id: `${accountSlug}-qa-${timestamp}`, // Unique identifier with clean slug
-                description: `Quality assurance sandbox for ${accountName} - comprehensive testing`
-            }
+        const templates = [
+            { name: 'Development Environment', desc: 'Development and testing environment' },
+            { name: 'Staging Environment', desc: 'Pre-production staging environment' },
+            { name: 'QA Testing', desc: 'Quality assurance and testing environment' }
         ];
+        
+        return templates.map((template, index) => ({
+            name: `${accountName} ${template.name}`,
+            account: accountName,
+            type: 'account',
+            created: new Date().toISOString(),
+            lastUsed: null,
+            id: `${accountSlug}-${template.name.toLowerCase().replace(/\s+/g, '-')}-${timestamp + index}`,
+            description: `${template.desc} for ${accountName}`
+        }));
     }
 
     // Helper method to create clean account slug for IDs
     createAccountSlug(accountName) {
         if (!accountName) {
-            console.error('🚨 Cannot create slug from empty account name');
+            this._log('error', '🚨 Cannot create slug from empty account name');
             return 'unknown-account';
         }
         
@@ -334,67 +390,40 @@ class Dashboard {
             .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
             .substring(0, 20); // Limit length
             
-        console.log(`🔧 Created slug for "${accountName}": "${slug}"`);
+        this._log('log', `🔧 Created slug for "${accountName}": "${slug}"`);
         return slug || 'account'; // Fallback if slug becomes empty
     }
 
-    // Get default organization sandboxes for an organization
+    // Optimized organization sandbox creation
     getDefaultOrganizationSandboxes(organizationId) {
         if (!organizationId || organizationId === 'undefined') {
-            console.error('🚨 Cannot create organization sandboxes without valid organizationId:', organizationId);
+            this._log('error', '🚨 Cannot create organization sandboxes without valid organizationId:', organizationId);
             return [];
         }
         
         const orgAccounts = this.organizationAccounts[organizationId] || [];
         const timestamp = new Date().getTime();
-        
-        // Get organization name for unique sandbox names
         const orgName = this.getOrganizationDisplayName(organizationId);
         const orgSlug = this.createOrganizationSlug(organizationId, orgName);
         const accountCount = orgAccounts.length;
         
-        return [
-            {
-                name: `${orgName} Multi-Account Development`,
-                type: 'organization',
-                organizationId: organizationId,
-                accounts: orgAccounts.map(acc => ({ ...acc })), // Clone accounts
-                created: new Date().toISOString(),
-                lastUsed: null,
-                id: `${orgSlug}-dev-${timestamp}`, // Unique identifier
-                description: `Development environment for ${orgName} organization (${accountCount} accounts)`
-            },
-            {
-                name: `${orgName} Cross-Account Integration`,
-                type: 'organization',
-                organizationId: organizationId,
-                accounts: orgAccounts.map(acc => ({ ...acc })), // Clone accounts
-                created: new Date().toISOString(),
-                lastUsed: null,
-                id: `${orgSlug}-integration-${timestamp}`, // Unique identifier
-                description: `Integration testing across all ${orgName} accounts`
-            },
-            {
-                name: `${orgName} Production Rollout`,
-                type: 'organization',
-                organizationId: organizationId,
-                accounts: orgAccounts.map(acc => ({ ...acc })), // Clone accounts
-                created: new Date().toISOString(),
-                lastUsed: null,
-                id: `${orgSlug}-production-${timestamp}`, // Unique identifier
-                description: `Production deployment sandbox for ${orgName} (${accountCount} accounts)`
-            },
-            {
-                name: `${orgName} Security & Compliance`,
-                type: 'organization',
-                organizationId: organizationId,
-                accounts: orgAccounts.map(acc => ({ ...acc })), // Clone accounts
-                created: new Date().toISOString(),
-                lastUsed: null,
-                id: `${orgSlug}-security-${timestamp}`, // Unique identifier
-                description: `Security and compliance testing for ${orgName} organization`
-            }
+        const templates = [
+            { name: 'Multi-Account Development', desc: `Development environment for ${orgName} organization (${accountCount} accounts)` },
+            { name: 'Cross-Account Integration', desc: `Integration testing across all ${orgName} accounts` },
+            { name: 'Production Rollout', desc: `Production rollout coordination for ${orgName}` },
+            { name: 'Security & Compliance', desc: `Security and compliance testing for ${orgName}` }
         ];
+        
+        return templates.map((template, index) => ({
+            name: `${orgName} ${template.name}`,
+            type: 'organization',
+            organizationId: organizationId,
+            accounts: orgAccounts.map(acc => ({ ...acc })),
+            created: new Date().toISOString(),
+            lastUsed: null,
+            id: `${orgSlug}-${template.name.toLowerCase().replace(/\s+/g, '-')}-${timestamp + index}`,
+            description: template.desc
+        }));
     }
 
     // Helper method to create clean organization slug for IDs
@@ -414,7 +443,7 @@ class Dashboard {
     // Helper method to get display name for organization
     getOrganizationDisplayName(organizationId) {
         // Try to find the organization name from current accounts
-        const activeAccountElement = document.getElementById('active-account');
+        const activeAccountElement = this._domCache.activeAccount;
         if (activeAccountElement && activeAccountElement.dataset.organization === organizationId) {
             return activeAccountElement.dataset.accountName;
         }
@@ -434,151 +463,190 @@ class Dashboard {
         return orgMapping[organizationId] || organizationId;
     }
 
-    // Update sandboxes display for current account
+    // Update sandboxes display for current account (optimized with debouncing)
     updateSandboxesForAccount(accountName) {
-        console.log('🔄 updateSandboxesForAccount called with accountName:', accountName);
-        console.log('🔄 Current this.currentActiveAccount:', this.currentActiveAccount);
-        
-        const container = document.getElementById('sandbox-list');
-        const popoverContent = document.getElementById('sandbox-popover-content');
-        
-        if (container) {
-            // Clear existing items in main container
-            container.innerHTML = '';
+        // If no account name provided, try to get it from DOM
+        if (!accountName) {
+            const activeElement = this._domCache.activeAccount || document.getElementById('active-account');
+            accountName = activeElement?.dataset.accountName || this.currentActiveAccount;
         }
         
-        if (popoverContent) {
-            // Clear existing sandbox items from popover (keep create and manage items)
-            const existingItems = popoverContent.querySelectorAll('.sandbox-popover-item');
-            existingItems.forEach(item => {
-                if (item.querySelector('.accountAvatar')) {
-                    item.remove();
-                }
-            });
+        if (!accountName) {
+            this._log('warn', 'No account name available for sandbox update');
+            return;
+        }
+        
+        // Reduce debounce delay and ensure immediate execution when needed
+        if (this._debounceTimers['updateSandboxes']) {
+            // If there's already a pending update, execute immediately
+            clearTimeout(this._debounceTimers['updateSandboxes']);
+            delete this._debounceTimers['updateSandboxes'];
+            this._updateSandboxesImmediate(accountName);
+        } else {
+            this._debounce('updateSandboxes', () => {
+                this._updateSandboxesImmediate(accountName);
+            }, 10);
+        }
+    }
+
+    // Force immediate sandbox update (bypasses debouncing)
+    forceUpdateSandboxes(accountName) {
+        this._updateSandboxesImmediate(accountName);
+    }
+
+    // Immediate sandbox update (internal method)
+    _updateSandboxesImmediate(accountName) {
+        this._log('log', '🔄 updateSandboxesForAccount called with accountName:', accountName);
+        this._log('log', '🔄 Current this.currentActiveAccount:', this.currentActiveAccount);
+        
+        // Refresh DOM cache to ensure we have latest elements
+        this._refreshDOMCache();
+        
+        const container = this._domCache.container;
+        const popoverContent = this._domCache.popoverContent;
+        
+        // Fallback to direct DOM queries if cache failed
+        const containerElement = container || document.getElementById('sandbox-list');
+        const popoverContentElement = popoverContent || document.getElementById('sandbox-popover-content');
+        
+        // Batch DOM operations by using document fragment
+        let containerFragment = null;
+        let popoverFragment = null;
+        
+        if (containerElement) {
+            containerElement.innerHTML = '';
+            containerFragment = document.createDocumentFragment();
+        }
+        
+        if (popoverContentElement) {
+            // Clear existing sandbox items from popover efficiently
+            const existingItems = popoverContentElement.querySelectorAll('.sandbox-popover-item');
+            const itemsToRemove = Array.from(existingItems).filter(item => item.querySelector('.accountAvatar'));
+            itemsToRemove.forEach(item => item.remove());
+            
+            popoverFragment = document.createDocumentFragment();
         }
 
-        // Check if current account belongs to an organization
-        const activeAccountElement = document.getElementById('active-account');
-        const organizationId = activeAccountElement ? activeAccountElement.dataset.organization : null;
-        const actualActiveAccountName = activeAccountElement ? activeAccountElement.dataset.accountName : null;
+        // Check if current account belongs to an organization (cached values)
+        const activeAccountElement = this._domCache.activeAccount || document.getElementById('active-account');
+        const organizationId = activeAccountElement?.dataset.organization;
+        const actualActiveAccountName = activeAccountElement?.dataset.accountName;
         
-        console.log('🔄 Active account element data:', {
+        this._log('log', '🔄 Active account element data:', {
             accountName: actualActiveAccountName,
             organizationId: organizationId
         });
         
         // Validate account name consistency
         if (accountName !== actualActiveAccountName) {
-            console.warn('⚠️  Account name mismatch! Parameter:', accountName, 'vs DOM:', actualActiveAccountName);
+            this._log('warn', '⚠️  Account name mismatch! Parameter:', accountName, 'vs DOM:', actualActiveAccountName);
         }
         
+        // Determine which sandboxes to show (simplified logic)
+        const sandboxesToShow = this._determineSandboxesToShow(accountName, organizationId);
+        
+        // Log the final sandboxes being shown for debugging
+        this._log('log', '📦 Final sandboxesToShow:', sandboxesToShow.length, 'sandboxes');
+        this._log('log', '📦 Sandbox names:', sandboxesToShow.map(s => s.name));
+        
+        // Batch create sandbox items
+        if (containerFragment && containerElement) {
+            sandboxesToShow.forEach((sandbox, index) => {
+                const sandboxItem = this.createSandboxItem(sandbox, index);
+                containerFragment.appendChild(sandboxItem);
+            });
+            
+            // Single DOM append
+            containerElement.appendChild(containerFragment);
+            
+            // Update animation delays
+            this.updateAnimationDelays(containerElement);
+        }
+        
+        // Batch create popover items
+        if (popoverFragment && popoverContentElement) {
+            sandboxesToShow.forEach((sandbox, index) => {
+                const sandboxPopoverItem = this.createSandboxPopoverItem(sandbox, index);
+                popoverFragment.appendChild(sandboxPopoverItem);
+            });
+            
+            // Insert before the divider container (if it exists)
+            const dividerContainer = popoverContentElement.querySelector('.sandbox-popover-divider-container');
+            if (dividerContainer) {
+                popoverContentElement.insertBefore(popoverFragment, dividerContainer);
+            } else {
+                popoverContentElement.appendChild(popoverFragment);
+            }
+            
+            // Update animation delays for popover
+            this.updatePopoverAnimationDelays(popoverContentElement);
+        }
+        
+        // Determine context for logging
+        const logContext = this._getSandboxContext(organizationId);
+        this._log('log', `Updated sandbox list - Context: ${logContext}, Sandboxes:`, sandboxesToShow);
+    }
+
+    // Helper method to determine which sandboxes to show (extracted for clarity)
+    _determineSandboxesToShow(accountName, organizationId) {
         // Check if we're in sandbox mode
         const isInSandboxMode = typeof window !== 'undefined' && window.isInSandboxMode;
         const originalBusinessAccountName = typeof window !== 'undefined' ? window.originalBusinessAccountName : null;
         const originalBusinessAccountOrganization = typeof window !== 'undefined' ? window.originalBusinessAccountOrganization : null;
         
-        console.log('🔄 Sandbox mode status:', {
+        this._log('log', '🔄 Sandbox mode status:', {
             isInSandboxMode,
             originalBusinessAccountName,
             originalBusinessAccountOrganization
         });
         
-        let sandboxesToShow = [];
-        
         if (isInSandboxMode && originalBusinessAccountName) {
             // In sandbox mode - always use the original business account to determine available sandboxes
-            // Don't let account switcher changes affect which sandboxes are available
             if (originalBusinessAccountOrganization) {
-                // Original business account was part of an organization - show organization sandboxes
-                sandboxesToShow = this.getOrganizationSandboxesForOrganization(originalBusinessAccountOrganization);
-                console.log('📦 SANDBOX MODE: Showing organization sandboxes for original business account organization:', originalBusinessAccountOrganization);
+                this._log('log', '📦 SANDBOX MODE: Showing organization sandboxes for original business account organization:', originalBusinessAccountOrganization);
+                return this.getOrganizationSandboxesForOrganization(originalBusinessAccountOrganization);
             } else {
-                // Original business account was standalone - show account sandboxes
-                sandboxesToShow = this.getSandboxesForAccount(originalBusinessAccountName);
-                console.log('📦 SANDBOX MODE: Showing account sandboxes for original business account:', originalBusinessAccountName);
+                this._log('log', '📦 SANDBOX MODE: Showing account sandboxes for original business account:', originalBusinessAccountName);
+                return this.getSandboxesForAccount(originalBusinessAccountName);
             }
         } else {
             // Not in sandbox mode - use CURRENT business account to determine sandboxes
-            // This is the critical path for business account isolation
-            console.log('📦 NORMAL MODE: Using current business account for sandbox isolation');
-            console.log('📦 Organization ID check:', organizationId, 'Type:', typeof organizationId);
+            this._log('log', '📦 NORMAL MODE: Using current business account for sandbox isolation');
+            this._log('log', '📦 Organization ID check:', organizationId, 'Type:', typeof organizationId);
             
             if (organizationId && organizationId !== 'undefined' && organizationId !== 'null') {
                 // Business account is part of a VALID organization
-                const accountSwitcherText = document.getElementById('accountSwitcherText');
-                const isViewingAllAccounts = accountSwitcherText && accountSwitcherText.textContent === 'All accounts';
+                const accountSwitcherText = this._domCache.accountSwitcherText;
+                const isViewingAllAccounts = accountSwitcherText?.textContent === 'All accounts';
                 
-                console.log('📦 Valid organization detected:', organizationId);
-                console.log('📦 Account switcher text:', accountSwitcherText?.textContent);
-                console.log('📦 Is viewing all accounts:', isViewingAllAccounts);
+                this._log('log', '📦 Valid organization detected:', organizationId);
+                this._log('log', '📦 Account switcher text:', accountSwitcherText?.textContent);
+                this._log('log', '📦 Is viewing all accounts:', isViewingAllAccounts);
                 
                 if (isViewingAllAccounts) {
-                    // Show organization sandboxes when viewing "All accounts"
-                    sandboxesToShow = this.getOrganizationSandboxesForOrganization(organizationId);
-                    console.log('📦 Showing organization sandboxes for business account organization:', organizationId);
+                    this._log('log', '📦 Showing organization sandboxes for business account organization:', organizationId);
+                    return this.getOrganizationSandboxesForOrganization(organizationId);
                 } else if (accountSwitcherText) {
-                    // Show account sandboxes for the specific selected sub-account
                     const specificAccountName = accountSwitcherText.textContent.replace(' (sandbox)', '');
-                    sandboxesToShow = this.getSandboxesForAccount(specificAccountName);
-                    console.log('📦 Showing account sandboxes for selected sub-account:', specificAccountName);
+                    this._log('log', '📦 Showing account sandboxes for selected sub-account:', specificAccountName);
+                    return this.getSandboxesForAccount(specificAccountName);
                 } else {
-                    // Fallback: show account sandboxes for the business account
-                    sandboxesToShow = this.getSandboxesForAccount(accountName);
-                    console.log('📦 Showing account sandboxes for business account (fallback):', accountName);
+                    this._log('log', '📦 Showing account sandboxes for business account (fallback):', accountName);
+                    return this.getSandboxesForAccount(accountName);
                 }
             } else {
                 // Business account is standalone - always show its account sandboxes
-                // This is the most important case for business account isolation
-                console.log('📦 STANDALONE ACCOUNT: No valid organization ID, treating as standalone');
-                sandboxesToShow = this.getSandboxesForAccount(accountName);
-                console.log('📦 CRITICAL: Showing account sandboxes for standalone business account:', accountName);
+                this._log('log', '📦 STANDALONE ACCOUNT: No valid organization ID, treating as standalone');
+                this._log('log', '📦 CRITICAL: Showing account sandboxes for standalone business account:', accountName);
+                return this.getSandboxesForAccount(accountName);
             }
         }
-        
-        // Log the final sandboxes being shown for debugging
-        console.log('📦 Final sandboxesToShow:', sandboxesToShow.length, 'sandboxes');
-        console.log('📦 Sandbox details:', sandboxesToShow.map(s => ({ 
-            name: s.name, 
-            account: s.account, 
-            type: s.type,
-            organizationId: s.organizationId,
-            id: s.id,
-            description: s.description
-        })));
-        
-        // Populate main container
-        if (container) {
-            sandboxesToShow.forEach((sandbox, index) => {
-                const sandboxItem = this.createSandboxItem(sandbox, index);
-                container.appendChild(sandboxItem);
-            });
-            
-            // Update animation delays
-            this.updateAnimationDelays(container);
-        }
-        
-        // Populate sandbox popover
-        if (popoverContent) {
-            sandboxesToShow.forEach((sandbox, index) => {
-                const sandboxPopoverItem = this.createSandboxPopoverItem(sandbox, index);
-                
-                // Insert before the divider container (if it exists)
-                const dividerContainer = popoverContent.querySelector('.sandbox-popover-divider-container');
-                if (dividerContainer) {
-                    popoverContent.insertBefore(sandboxPopoverItem, dividerContainer);
-                } else {
-                    popoverContent.appendChild(sandboxPopoverItem);
-                }
-            });
-            
-            // Update animation delays for popover
-            this.updatePopoverAnimationDelays(popoverContent);
-        }
-        
-        // Determine context for logging
-        const logContext = isInSandboxMode ? 'Sandbox Mode' : 
-                          (organizationId ? 'Organization' : 'Account');
-        console.log(`Updated sandbox list - Context: ${logContext}, Sandboxes:`, sandboxesToShow);
+    }
+
+    // Helper method to get sandbox context for logging
+    _getSandboxContext(organizationId) {
+        const isInSandboxMode = typeof window !== 'undefined' && window.isInSandboxMode;
+        return isInSandboxMode ? 'Sandbox Mode' : (organizationId ? 'Organization' : 'Account');
     }
 
     // Create a sandbox item element for the main list
@@ -664,7 +732,7 @@ class Dashboard {
     // Get the color of a business account by name
     getBusinessAccountColor(accountName) {
         // Check if this is the current active account
-        const activeAccountElement = document.getElementById('active-account');
+        const activeAccountElement = this._domCache.activeAccount;
         if (activeAccountElement && activeAccountElement.dataset.accountName === accountName) {
             return activeAccountElement.dataset.accountColor;
         }
@@ -692,7 +760,7 @@ class Dashboard {
         }
         
         // Also check if the active account belongs to this organization
-        const activeAccountElement = document.getElementById('active-account');
+        const activeAccountElement = this._domCache.activeAccount;
         if (activeAccountElement && activeAccountElement.dataset.organization === organizationId) {
             return activeAccountElement.dataset.accountColor;
         }
@@ -759,7 +827,7 @@ class Dashboard {
 
     // Enter sandbox mode
     enterSandboxMode(sandbox) {
-        console.log('Entering sandbox mode:', sandbox.name, 'Type:', sandbox.type);
+        this._log('log', 'Entering sandbox mode:', sandbox.name, 'Type:', sandbox.type);
         
         // Update last used timestamp
         sandbox.lastUsed = new Date().toISOString();
@@ -797,13 +865,13 @@ class Dashboard {
         // Update UI to show sandbox mode
         this.updateSandboxesForAccount(this.currentActiveAccount);
         
-        console.log('Entered sandbox mode:', sandbox.name, 'for account:', sandbox.account || 'organization');
+        this._log('log', 'Entered sandbox mode:', sandbox.name, 'for account:', sandbox.account || 'organization');
     }
 
     // Create a new sandbox for the current account
     createSandbox(sandboxName, sandboxType = 'account') {
         if (!this.currentActiveAccount) {
-            console.error('No active account to create sandbox for');
+            this._log('error', 'No active account to create sandbox for');
             return;
         }
 
@@ -834,17 +902,17 @@ class Dashboard {
         // Update UI
         this.updateSandboxesForAccount(this.currentActiveAccount);
         
-        console.log('Created new sandbox:', sandboxName, 'for account:', this.currentActiveAccount);
+        this._log('log', 'Created new sandbox:', sandboxName, 'for account:', this.currentActiveAccount);
         return newSandbox;
     }
 
     // Create a new organization sandbox
     createOrganizationSandbox(sandboxName) {
-        const activeAccountElement = document.getElementById('active-account');
+        const activeAccountElement = this._domCache.activeAccount;
         const organizationId = activeAccountElement ? activeAccountElement.dataset.organization : null;
         
         if (!organizationId || organizationId === 'undefined') {
-            console.error('🚨 Cannot create organization sandbox: Current account is not part of a valid organization. OrganizationId:', organizationId);
+            this._log('error', '🚨 Cannot create organization sandbox: Current account is not part of a valid organization. OrganizationId:', organizationId);
             return;
         }
 
@@ -875,14 +943,14 @@ class Dashboard {
         // Update UI
         this.updateSandboxesForAccount(this.currentActiveAccount);
         
-        console.log('Created new organization sandbox:', sandboxName, 'for organization:', organizationId);
+        this._log('log', 'Created new organization sandbox:', sandboxName, 'for organization:', organizationId);
         return newOrganizationSandbox;
     }
 
     // Delete a sandbox for the current account
     deleteSandbox(sandboxName) {
         if (!this.currentActiveAccount) {
-            console.error('No active account to delete sandbox from');
+            this._log('error', 'No active account to delete sandbox from');
             return;
         }
 
@@ -895,7 +963,7 @@ class Dashboard {
         // Update UI
         this.updateSandboxesForAccount(this.currentActiveAccount);
         
-        console.log('Deleted sandbox:', sandboxName, 'from account:', this.currentActiveAccount);
+        this._log('log', 'Deleted sandbox:', sandboxName, 'from account:', this.currentActiveAccount);
     }
 
     // Delete an organization sandbox
@@ -909,7 +977,7 @@ class Dashboard {
         // Update UI
         this.updateSandboxesForAccount(this.currentActiveAccount);
         
-        console.log('Deleted organization sandbox:', sandboxName, 'from organization:', organizationId);
+        this._log('log', 'Deleted organization sandbox:', sandboxName, 'from organization:', organizationId);
     }
 
     // Get account statistics
@@ -1052,49 +1120,42 @@ function createSandbox(sandboxName, sandboxType = 'account') {
     }
 }
 
-// Global debugging function for testing sandbox isolation
+// Optimized global debugging function for testing sandbox isolation
 function debugSandboxIsolation() {
     if (!window.dashboard) {
         console.error('Dashboard not available');
         return;
     }
     
+    const isDebugMode = window.dashboard.debugMode;
+    if (!isDebugMode) {
+        console.log('Debug mode disabled. Enable by running on localhost.');
+        return;
+    }
+    
     console.log('🔍 === SANDBOX ISOLATION DEBUG ===');
     
-    const activeAccount = document.getElementById('active-account');
-    const currentAccount = activeAccount ? activeAccount.dataset.accountName : 'Unknown';
-    const currentOrgId = activeAccount ? activeAccount.dataset.organization : 'Unknown';
+    const activeAccount = window.dashboard._domCache.activeAccount || document.getElementById('active-account');
+    const currentAccount = activeAccount?.dataset.accountName || 'Unknown';
+    const currentOrgId = activeAccount?.dataset.organization || 'Unknown';
     
-    console.log('🔍 Current business account:', currentAccount);
-    console.log('🔍 Current organization ID:', currentOrgId);
+    console.log(`🔍 Current: ${currentAccount} | Org: ${currentOrgId}`);
     console.log('🔍 Dashboard.currentActiveAccount:', window.dashboard.currentActiveAccount);
     
-    // Show all account sandboxes
+    // Show all account sandboxes (summarized)
     console.log('🔍 All account sandboxes in storage:');
-    Object.keys(window.dashboard.accountSandboxes).forEach(accountName => {
-        const sandboxes = window.dashboard.accountSandboxes[accountName];
-        console.log(`  ${accountName}: ${sandboxes.length} sandboxes`, sandboxes.map(s => ({
-            name: s.name,
-            account: s.account,
-            id: s.id,
-            description: s.description
-        })));
+    Object.entries(window.dashboard.accountSandboxes).forEach(([accountName, sandboxes]) => {
+        console.log(`  ${accountName}: ${sandboxes.length} sandboxes (${sandboxes.length})`, sandboxes);
     });
     
     // Show organization sandboxes with issue detection
     console.log('🔍 All organization sandboxes in storage:');
     let brokenOrgSandboxes = 0;
-    Object.keys(window.dashboard.organizationSandboxes).forEach(orgId => {
-        const sandboxes = window.dashboard.organizationSandboxes[orgId];
+    Object.entries(window.dashboard.organizationSandboxes).forEach(([orgId, sandboxes]) => {
         const isBroken = !orgId || orgId === 'undefined' || orgId === 'null';
         const status = isBroken ? '🚨 BROKEN' : '✅ OK';
         
-        console.log(`  ${orgId} (${status}): ${sandboxes.length} sandboxes`, sandboxes.map(s => ({
-            name: s.name,
-            organizationId: s.organizationId,
-            id: s.id,
-            description: s.description
-        })));
+        console.log(`  ${orgId} (${status}): ${sandboxes.length} sandboxes (${sandboxes.length})`, sandboxes);
         
         if (isBroken) {
             brokenOrgSandboxes += sandboxes.length;
@@ -1107,12 +1168,7 @@ function debugSandboxIsolation() {
     
     // Show what sandboxes would be displayed for current account
     const currentSandboxes = window.dashboard.getSandboxesForAccount(currentAccount);
-    console.log('🔍 Sandboxes for current account:', currentSandboxes.length, currentSandboxes.map(s => ({
-        name: s.name,
-        account: s.account,
-        description: s.description,
-        id: s.id
-    })));
+    console.log('🔍 Sandboxes for current account:', currentSandboxes.length, currentSandboxes);
     
     console.log('🔍 === END DEBUG ===');
 }
@@ -1126,15 +1182,15 @@ function cleanupBrokenOrganizationSandboxes() {
     return window.dashboard.cleanupBrokenOrganizationSandboxes();
 }
 
-// Global function to upgrade existing sandboxes to new naming system
+// Optimized global function to upgrade existing sandboxes to new naming system
 function upgradeExistingSandboxes() {
     if (!window.dashboard) {
         console.error('Dashboard not available');
         return;
     }
     
-    const activeAccount = document.getElementById('active-account');
-    const accountName = activeAccount ? activeAccount.dataset.accountName : null;
+    const activeAccount = window.dashboard._domCache.activeAccount || document.getElementById('active-account');
+    const accountName = activeAccount?.dataset.accountName;
     
     if (!accountName) {
         console.error('No active account found');
@@ -1153,9 +1209,6 @@ function upgradeExistingSandboxes() {
     console.log(`Found ${existingSandboxes.length} existing sandboxes to upgrade:`, 
                 existingSandboxes.map(s => s.name));
     
-    // Clear old sandboxes and create new enhanced ones
-    window.dashboard.accountSandboxes[accountName] = [];
-    
     // Create new enhanced default sandboxes
     const newSandboxes = window.dashboard.getDefaultSandboxes(accountName);
     window.dashboard.accountSandboxes[accountName] = newSandboxes;
@@ -1170,15 +1223,15 @@ function upgradeExistingSandboxes() {
     return newSandboxes;
 }
 
-// Global function to recreate default sandboxes for current account
+// Optimized global function to recreate default sandboxes for current account
 function recreateDefaultSandboxes() {
     if (!window.dashboard) {
         console.error('Dashboard not available');
         return;
     }
     
-    const activeAccount = document.getElementById('active-account');
-    const accountName = activeAccount ? activeAccount.dataset.accountName : null;
+    const activeAccount = window.dashboard._domCache.activeAccount || document.getElementById('active-account');
+    const accountName = activeAccount?.dataset.accountName;
     
     if (!accountName) {
         console.error('No active account found');
@@ -1186,9 +1239,6 @@ function recreateDefaultSandboxes() {
     }
     
     console.log(`🔄 Recreating default sandboxes for: ${accountName}`);
-    
-    // Clear existing sandboxes for this account
-    window.dashboard.accountSandboxes[accountName] = [];
     
     // Force recreation of default sandboxes
     const newSandboxes = window.dashboard.getDefaultSandboxes(accountName);
@@ -1310,14 +1360,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Demo function to update main content
+// Optimized demo function to update main content
 function updateMainContent(selectedItem) {
-    const mainContent = document.querySelector('.content-wrapper');
-    if (mainContent) {
+    // Debounce content updates to avoid excessive DOM manipulation
+    if (updateMainContent._debounceTimer) {
+        clearTimeout(updateMainContent._debounceTimer);
+    }
+    
+    updateMainContent._debounceTimer = setTimeout(() => {
+        const mainContent = document.querySelector('.content-wrapper');
+        if (!mainContent) return;
+        
         const timestamp = new Date().toLocaleTimeString();
         const currentAccount = window.dashboard?.currentActiveAccount || 'Unknown';
-        const accountStats = window.dashboard?.getAccountStats(currentAccount) || {};
         
+        // Only get stats if dashboard is available and debug mode is on
+        let accountStats = {};
+        if (window.dashboard && window.dashboard.debugMode) {
+            accountStats = window.dashboard.getAccountStats(currentAccount) || {};
+        }
+        
+        // Remove existing status message efficiently
+        const existingStatus = mainContent.querySelector('.status-message');
+        if (existingStatus) {
+            existingStatus.remove();
+        }
+        
+        // Create new status message
         const statusMessage = document.createElement('div');
         statusMessage.className = 'status-message';
         statusMessage.innerHTML = `
@@ -1331,19 +1400,16 @@ function updateMainContent(selectedItem) {
             ">
                 <p><strong>Selected:</strong> ${selectedItem} at ${timestamp}</p>
                 <p><strong>Active Account:</strong> ${currentAccount}</p>
-                <p><strong>Account Sandboxes:</strong> ${accountStats.totalSandboxes || 0} total, ${accountStats.recentlyUsed || 0} recently used</p>
+                ${window.dashboard?.debugMode ? 
+                    `<p><strong>Account Sandboxes:</strong> ${accountStats.totalSandboxes || 0} total, ${accountStats.recentlyUsed || 0} recently used</p>` : 
+                    ''
+                }
             </div>
         `;
         
-        // Remove existing status message
-        const existingStatus = mainContent.querySelector('.status-message');
-        if (existingStatus) {
-            existingStatus.remove();
-        }
-        
         // Add new status message
         mainContent.appendChild(statusMessage);
-    }
+    }, 100);
 }
 
 // Add CSS for active nav items and sandbox management
