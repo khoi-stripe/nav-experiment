@@ -326,8 +326,14 @@
 
         /* Account Search Field */
         .account-search-container {
-            padding: 8px 12px 0 12px;
-            margin-bottom: 8px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #ffffff;
+            padding: 8px 12px 8px 12px;
+            margin-bottom: 0;
+            border-bottom: 1px solid #f0f0f0;
+            border-radius: 8px 8px 0 0;
         }
 
         .account-search-field {
@@ -349,6 +355,11 @@
 
         .account-search-field::placeholder {
             color: #999;
+        }
+
+        /* Account Items Container */
+        .account-items-container {
+            padding: 4px 0 0 0;
         }
 
         /* Create Popover */
@@ -1998,13 +2009,60 @@
 
         function showAccountPopover(element) {
             const popover = document.getElementById('accountPopover');
+            const popoverContent = popover.querySelector('.account-popover-content');
             const rect = element.getBoundingClientRect();
             
-            // Position the popover 4px below the element, left-aligned
-            popover.style.left = rect.left + 'px';
-            popover.style.top = (rect.bottom + 4) + 'px';
-            
+            // Temporarily show popover to measure its dimensions
+            popover.style.visibility = 'hidden';
             popover.classList.add('show');
+            
+            const popoverRect = popoverContent.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const margin = 24; // 24px from bottom as requested
+            
+            let finalTop = rect.bottom + 4; // Default: 4px below element
+            let maxHeight = null;
+            
+            // Check if popover would extend past viewport bottom
+            if (finalTop + popoverRect.height > viewportHeight - margin) {
+                // Try positioning above the element
+                const topPosition = rect.top - popoverRect.height - 4;
+                
+                if (topPosition >= margin) {
+                    // Enough space above - position above element
+                    finalTop = topPosition;
+                } else {
+                    // Not enough space above or below - constrain height and position optimally
+                    const availableSpaceBelow = viewportHeight - rect.bottom - 4 - margin;
+                    const availableSpaceAbove = rect.top - 4 - margin;
+                    
+                    if (availableSpaceBelow > availableSpaceAbove) {
+                        // More space below - use below with constrained height
+                        finalTop = rect.bottom + 4;
+                        maxHeight = Math.max(200, availableSpaceBelow); // Min 200px height
+                    } else {
+                        // More space above - use above with constrained height
+                        maxHeight = Math.max(200, availableSpaceAbove); // Min 200px height
+                        finalTop = margin;
+                    }
+                }
+            }
+            
+            // Apply positioning
+            popover.style.left = rect.left + 'px';
+            popover.style.top = finalTop + 'px';
+            
+            // Apply height constraint if needed
+            if (maxHeight) {
+                popoverContent.style.maxHeight = maxHeight + 'px';
+                popoverContent.style.overflowY = 'auto';
+            } else {
+                popoverContent.style.maxHeight = '';
+                popoverContent.style.overflowY = '';
+            }
+            
+            // Make visible and add active state
+            popover.style.visibility = 'visible';
             
             // Add popover-active class to maintain hover state
             element.classList.add('popover-active');
@@ -2015,7 +2073,19 @@
 
         function hideAccountPopover() {
             const popover = document.getElementById('accountPopover');
+            const popoverContent = popover.querySelector('.account-popover-content');
+            
             popover.classList.remove('show');
+            
+            // Reset all style properties to ensure clean state for next open
+            popover.style.visibility = '';
+            popover.style.left = '';
+            popover.style.top = '';
+            
+            if (popoverContent) {
+                popoverContent.style.maxHeight = '';
+                popoverContent.style.overflowY = '';
+            }
             
             // Remove popover-active class from account switcher
             const accountSwitcher = document.getElementById('accountSwitcher');
@@ -2676,6 +2746,21 @@
             // Clear existing content
             accountPopoverContent.innerHTML = '';
             
+            // Add search field if there are more than 8 accounts
+            if (accounts.length > 8) {
+                const searchContainer = document.createElement('div');
+                searchContainer.className = 'account-search-container';
+                searchContainer.innerHTML = `
+                    <input type="text" class="account-search-field" placeholder="Search" id="accountSearchField">
+                `;
+                accountPopoverContent.appendChild(searchContainer);
+            }
+            
+            // Create scrollable container for account items
+            const accountItemsContainer = document.createElement('div');
+            accountItemsContainer.className = 'account-items-container';
+            accountPopoverContent.appendChild(accountItemsContainer);
+            
                          // Add "All accounts" header
              const allAccountsItem = document.createElement('div');
              allAccountsItem.className = 'account-popover-item selected';
@@ -2864,6 +2949,11 @@
                 accountPopoverContent.appendChild(searchContainer);
             }
             
+            // Create scrollable container for account items
+            const accountItemsContainer = document.createElement('div');
+            accountItemsContainer.className = 'account-items-container';
+            accountPopoverContent.appendChild(accountItemsContainer);
+            
             // Add "All accounts" header (selected by default)
             const allAccountsItem = document.createElement('div');
             allAccountsItem.className = 'account-popover-item selected';
@@ -2923,7 +3013,7 @@
                 hideAccountPopover();
             });
             
-            accountPopoverContent.appendChild(allAccountsItem);
+            accountItemsContainer.appendChild(allAccountsItem);
             
             // Add mirrored accounts from the organization sandbox
             mirroredAccounts.forEach((account, index) => {
@@ -2984,11 +3074,11 @@
                         window.dashboard.updateSandboxesForAccount(selectedAccountName);
                     }
                     
-                    console.log('Navigated to mirrored account:', selectedAccountName);
-                    hideAccountPopover();
+                                    console.log('Navigated to mirrored account:', selectedAccountName);
+                hideAccountPopover();
                 });
                 
-                accountPopoverContent.appendChild(accountItem);
+                accountItemsContainer.appendChild(accountItem);
              });
              
              // Add animation delays to all items
