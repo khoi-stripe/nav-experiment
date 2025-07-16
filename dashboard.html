@@ -42,22 +42,29 @@
         /* Account Panel Specific Styling */
         .account-panel {
             width: 20px;
-            padding: 12px 4px;
-            border-right: none;
+            padding: 12px 8px;
+            background: #F5F6F8;
             cursor: pointer;
             position: relative;
-            transition: width 0.5s cubic-bezier(0.165, 0.84, 0.44, 1), padding 0.5s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.5s cubic-bezier(0.165, 0.84, 0.44, 1), border-right 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
-            transition-delay: 0.3s;
-            box-shadow: 12px 0 40px 4px rgba(0, 0, 0, 0.18), 6px 0 16px rgba(0, 0, 0, 0.12);
+            transition: width 0.25s cubic-bezier(0.165, 0.84, 0.44, 1), padding 0.25s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.25s cubic-bezier(0.165, 0.84, 0.44, 1), border-right 0.25s cubic-bezier(0.165, 0.84, 0.44, 1);
+            box-shadow: 12px 0 40px 4px rgba(0, 0, 0, 0.25), 6px 0 16px rgba(0, 0, 0, 0.18);
+        }
+
+        /* Prevent account panel collapse when any popover is open */
+        .account-panel.popover-open {
+            transition-delay: 999s !important;
         }
         
-        .account-panel:hover {
+        .account-panel.popover-open.hovered {
+            transition-delay: 0s !important;
+        }
+        
+        .account-panel.hovered:not(.opened) {
             width: 48px;
             padding: 12px;
-            background: #F5F6F8;
             border-right: 1px solid #e0e0e0;
             box-shadow: 6px 0 16px rgba(0, 0, 0, 0.12), 2px 0 6px rgba(0, 0, 0, 0.08);
-            transition: width 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), padding 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), border-right 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition: width 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), padding 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), border-right 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             transition-delay: 0s;
         }
 
@@ -69,21 +76,35 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.12);
             opacity: 0;
             z-index: 1000;
             pointer-events: none;
             transition: opacity 0.2s ease;
         }
 
-        .account-panel:not(:hover):not(.opened)::after {
+        .account-panel.truly-collapsed:not(.opened):not(.popover-open)::after {
             opacity: 1;
         }
 
-        .account-panel:hover::after,
+        .account-panel.hovered::after,
         .account-panel.opened::after {
             opacity: 0;
         }
+
+        /* Reduce opacity of nav items when account panel is collapsed */
+        /*
+        .account-panel:not(:hover):not(.opened) .nav-component {
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
+        }
+
+        .account-panel.hovered .nav-component,
+        .account-panel.opened .nav-component {
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+        */
 
         .nav-panel {
             overflow: visible;
@@ -94,7 +115,6 @@
         }
 
         .account-panel {
-            background: #D8DEE4;
             box-shadow: inset -6px 0 6px -6px rgba(0, 0, 0, 0.08);
         }
 
@@ -113,13 +133,13 @@
         /* Expand Button Container */
         .expandButton-container {
             position: fixed;
-            left: 65px; /* 20px (account panel) + 49px (nav panel) - 4px gap */
+            left: 69px; /* 20px (account panel) + 49px (nav panel) + 0px gap */
             top: 50%;
             transform: translateY(-50%);
-            width: 24px; /* Increased for better click area */
+            width: 16px; /* Compact width */
             height: 32px; /* 16px button + 8px padding on top and bottom */
             z-index: 1002;
-            transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: left 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -128,13 +148,14 @@
         }
         
         /* Update expand button position when account panel is hovered */
-        .account-panel:hover ~ .nav-panel ~ .expandButton-container {
-            left: 93px; /* 48px (hovered account panel) + 49px (nav panel) - 4px gap */
+        .account-panel.hovered ~ .nav-panel ~ .expandButton-container {
+            left: 97px; /* 48px (hovered account panel) + 49px (nav panel) + 0px gap */
+            transition: left 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Slightly slower to sync with panel */
         }
         
         /* Update expand button position when account panel is opened */
         .account-panel.opened ~ .nav-panel ~ .expandButton-container {
-            left: 265px; /* 220px (opened account panel) + 49px (nav panel) - 4px gap */
+            left: 269px; /* 220px (opened account panel) + 49px (nav panel) + 0px gap */
         }
 
         .expandButton-container:hover {
@@ -610,21 +631,22 @@
         }
 
         .nav-panel.expanded ~ .expandButton-container {
-            left: 236px; /* 20px (account panel) + 220px (expanded nav panel) - 4px gap */
+            left: 240px; /* 20px (account panel) + 220px (expanded nav panel) + 0px gap */
         }
 
         /* When account panel is hovered AND nav panel is expanded */
-        .account-panel:hover ~ .nav-panel.expanded ~ .expandButton-container {
-            left: 264px; /* 48px (hovered account panel) + 220px (expanded nav panel) - 4px gap */
+        .account-panel.hovered ~ .nav-panel.expanded ~ .expandButton-container {
+            left: 268px; /* 48px (hovered account panel) + 220px (expanded nav panel) + 0px gap */
+            transition: left 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Slightly slower to sync with panel */
         }
 
         /* When both account panel is opened AND nav panel is expanded */
         .account-panel.opened ~ .nav-panel.expanded ~ .expandButton-container {
-            left: 436px; /* 220px (opened account panel) + 220px (expanded nav panel) - 4px gap */
+            left: 440px; /* 220px (opened account panel) + 220px (expanded nav panel) + 0px gap */
         }
 
         /* Ensure opened state positioning takes priority over hover when nav panel is expanded */
-        .account-panel.opened:hover ~ .nav-panel.expanded ~ .expandButton-container {
+        .account-panel.opened.hovered ~ .nav-panel.expanded ~ .expandButton-container {
             left: 436px; /* Same as opened+expanded state */
         }
 
@@ -692,29 +714,29 @@
         }
 
         /* Disable interactions when account panel is collapsed */
-        .account-panel:not(:hover):not(.opened) .nav-component {
+        .account-panel:not(.hovered):not(.opened) .nav-component {
             pointer-events: none;
             cursor: default;
         }
 
-        .account-panel:not(:hover):not(.opened) .nav-component:hover::before,
-        .account-panel:not(:hover):not(.opened) .nav-component.popover-active::before {
+        .account-panel:not(.hovered):not(.opened) .nav-component:hover::before,
+        .account-panel:not(.hovered):not(.opened) .nav-component.popover-active::before {
             display: none;
         }
 
         /* Delay re-enabling interactions after hover transition */
-        .account-panel:hover .nav-component {
+        .account-panel.hovered .nav-component {
             pointer-events: none;
             cursor: default;
             animation: enable-interactions 0.1s ease forwards;
-            animation-delay: 0.35s;
+            animation-delay: 0.25s;
         }
 
-        .account-panel:hover .nav-component:hover::before,
-        .account-panel:hover .nav-component.popover-active::before {
+        .account-panel.hovered .nav-component:hover::before,
+        .account-panel.hovered .nav-component.popover-active::before {
             display: none;
             animation: enable-hover-effects 0.1s ease forwards;
-            animation-delay: 0.35s;
+            animation-delay: 0.25s;
         }
 
         .account-panel.opened .nav-component {
@@ -947,7 +969,6 @@
         .account-panel.opened {
             width: 220px !important;
             padding: 12px 20px !important;
-            background: #F5F6F8 !important;
             border-right: 1px solid #e0e0e0 !important;
             box-shadow: 6px 0 16px rgba(0, 0, 0, 0.12), 2px 0 6px rgba(0, 0, 0, 0.08) !important;
         }
@@ -957,17 +978,16 @@
         }
         
         /* Prevent hover effects when panel is opened */
-        .account-panel.opened:hover {
+        .account-panel.opened.hovered {
             width: 220px;
             padding: 12px 20px;
-            background: #F5F6F8;
             border-right: 1px solid #e0e0e0;
             box-shadow: 6px 0 16px rgba(0, 0, 0, 0.12), 2px 0 6px rgba(0, 0, 0, 0.08);
         }
         
         /* Ensure opened state positioning takes priority over hover */
-        .account-panel.opened:hover ~ .nav-panel ~ .expandButton-container {
-            left: 265px; /* Same as opened state - 220px (opened account panel) + 49px (nav panel) - 4px gap */
+        .account-panel.opened.hovered ~ .nav-panel ~ .expandButton-container {
+            left: 269px; /* Same as opened state - 220px (opened account panel) + 49px (nav panel) + 0px gap */
         }
 
         /* Account switcher text truncation */
@@ -1004,21 +1024,25 @@
             font-weight: 600;
             z-index: 9999;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1), width 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: left 0.25s cubic-bezier(0.165, 0.84, 0.44, 1), width 0.25s cubic-bezier(0.165, 0.84, 0.44, 1);
             padding: 0 16px;
             box-sizing: border-box;
         }
 
         /* Adjust bar position when account panel is hovered */
-        .account-panel:hover ~ .dashboard.sandbox-mode .sandbox-indicator-bar {
+        .dashboard.sandbox-mode:has(.account-panel.hovered) .sandbox-indicator-bar,
+        .dashboard.sandbox-mode.account-panel-hovered .sandbox-indicator-bar {
             left: 48px;  /* Start after hovered account panel, extend over nav panel and main content */
             width: calc(100% - 48px);  /* Extend over nav panel and main content */
+            transition: left 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         
         /* Adjust bar position when account panel is opened */
-        .account-panel.opened ~ .dashboard.sandbox-mode .sandbox-indicator-bar {
+        .dashboard.sandbox-mode:has(.account-panel.opened) .sandbox-indicator-bar,
+        .dashboard.sandbox-mode.account-panel-opened .sandbox-indicator-bar {
             left: 220px;  /* Start after opened account panel, extend over nav panel and main content */
             width: calc(100% - 220px);  /* Extend over nav panel and main content */
+            transition: left 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
         /* Adjust nav panel and main content when sandbox bar is visible */
@@ -2276,6 +2300,38 @@
                 accountSwitcher.classList.remove('popover-active');
             }
             
+            // CRITICAL: Force check hover state when popover closes
+            // This is where the hover state gets stuck - need to verify if mouse is still over account panel
+            setTimeout(() => {
+                const accountPanel = document.getElementById('accountPanel');
+                if (accountPanel) {
+                    const isOpened = accountPanel.classList.contains('opened');
+                    
+                    debugLog('hideAccountPopover', 'Checking state after popover close', {
+                        isOpened,
+                        hasHoveredClass: accountPanel.classList.contains('hovered')
+                    });
+                    
+                    if (!isOpened) {
+                        // Use robust mouse position checking instead of :hover
+                        const isActuallyHovered = window.isMouseOverAccountPanel ? window.isMouseOverAccountPanel() : false;
+                        
+                        if (!isActuallyHovered) {
+                            debugLog('hideAccountPopover', '🧹 Mouse not over panel - initiating cleanup');
+                            // Mouse has moved away - clean up hover state
+                            if (window.syncAccountPanelState) {
+                                window.syncAccountPanelState();
+                            }
+                            if (window.resetAccountPanelState) {
+                                window.resetAccountPanelState();
+                            }
+                        } else {
+                            debugLog('hideAccountPopover', '✅ Mouse still over panel - keeping hover state');
+                        }
+                    }
+                }
+            }, 50);
+            
             // Delay style cleanup until after transition completes (250ms)
             setTimeout(() => {
                 // Reset all style properties to ensure clean state for next open
@@ -2334,6 +2390,24 @@
             if (createTrigger) {
                 createTrigger.classList.remove('popover-active');
             }
+            
+            // Force check hover state when popover closes
+            setTimeout(() => {
+                const accountPanel = document.getElementById('accountPanel');
+                if (accountPanel) {
+                    const isActuallyHovered = window.isMouseOverAccountPanel ? window.isMouseOverAccountPanel() : false;
+                    const isOpened = accountPanel.classList.contains('opened');
+                    
+                    if (!isActuallyHovered && !isOpened) {
+                        if (window.syncAccountPanelState) {
+                            window.syncAccountPanelState();
+                        }
+                        if (window.resetAccountPanelState) {
+                            window.resetAccountPanelState();
+                        }
+                    }
+                }
+            }, 50);
         }
 
         function toggleCreatePopover(element) {
@@ -2380,6 +2454,24 @@
             if (sandboxTrigger) {
                 sandboxTrigger.classList.remove('popover-active');
             }
+            
+            // Force check hover state when popover closes
+            setTimeout(() => {
+                const accountPanel = document.getElementById('accountPanel');
+                if (accountPanel) {
+                    const isActuallyHovered = window.isMouseOverAccountPanel ? window.isMouseOverAccountPanel() : false;
+                    const isOpened = accountPanel.classList.contains('opened');
+                    
+                    if (!isActuallyHovered && !isOpened) {
+                        if (window.syncAccountPanelState) {
+                            window.syncAccountPanelState();
+                        }
+                        if (window.resetAccountPanelState) {
+                            window.resetAccountPanelState();
+                        }
+                    }
+                }
+            }, 50);
         }
 
         function toggleSandboxPopover(element) {
@@ -2413,6 +2505,13 @@
             hideAccountPopover();
             hideCreatePopover();
             hideSandboxPopover();
+            
+            // Clean up hover state when panel is toggled programmatically
+            // This prevents hover state from getting stuck
+            if (accountPanel.classList.contains('opened')) {
+                // If panel is currently opened, we're closing it - remove hovered class
+                accountPanel.classList.remove('hovered');
+            }
             
             if (window.innerWidth <= 768) {
                 // Save nav panel state before closing if we're opening account panel
@@ -2466,6 +2565,11 @@
             
             // Update status indicator
             updateNavPanelStatus();
+            
+            // Update sandbox bar position to reflect new account panel state
+            if (window.updateSandboxBarPosition) {
+                window.updateSandboxBarPosition();
+            }
         }
 
         // Toggle nav panel expansion
@@ -2749,6 +2853,10 @@
             if (sandboxIndicatorBar) {
                 sandboxIndicatorBar.style.display = 'flex';
                 sandboxIndicatorBar.querySelector('span').textContent = `Sandbox Mode: ${sandboxName}`;
+                // Force update sandbox bar position immediately
+                if (window.updateSandboxBarPosition) {
+                    window.updateSandboxBarPosition();
+                }
             }
             if (dashboard) {
                 dashboard.classList.add('sandbox-mode');
@@ -2835,6 +2943,9 @@
             const dashboard = document.querySelector('.dashboard');
             if (sandboxIndicatorBar) {
                 sandboxIndicatorBar.style.display = 'none';
+                // Reset any inline styles that might have been applied
+                sandboxIndicatorBar.style.left = '';
+                sandboxIndicatorBar.style.width = '';
             }
             if (dashboard) {
                 dashboard.classList.remove('sandbox-mode');
@@ -4077,5 +4188,804 @@
 
     <!-- Load the updated dashboard.js -->
     <script src="dashboard.js"></script>
+    
+    <script>
+        // Robust mouse position tracking for account panel
+        let lastMousePosition = { x: 0, y: 0 };
+        let debugMode = true; // Enable debugging
+        window.debugMode = debugMode; // Make globally accessible
+        
+        // Nuclear CSS override approach - force correct visual state
+        function forceCorrectVisualState() {
+            const accountPanel = document.getElementById('accountPanel');
+            if (!accountPanel) return;
+            
+            const isMouseActuallyOver = window.isMouseOverAccountPanel ? window.isMouseOverAccountPanel() : false;
+            const hasActivePopover = document.querySelector('.account-popover.show, .create-popover.show, .sandbox-popover.show');
+            const isOpened = accountPanel.classList.contains('opened');
+            
+            // Determine what the visual state SHOULD be
+            const shouldBeExpanded = isMouseActuallyOver || hasActivePopover || isOpened;
+            
+            // Get current visual state
+            const computedStyle = window.getComputedStyle(accountPanel);
+            const currentWidth = computedStyle.width;
+            const isCurrentlyExpanded = currentWidth !== '20px';
+            
+            // If visual state doesn't match expected state, force it
+            if (shouldBeExpanded !== isCurrentlyExpanded) {
+                debugLog('ForceVisual', `🔧 FORCING visual state - Should be ${shouldBeExpanded ? 'expanded' : 'collapsed'}, currently ${isCurrentlyExpanded ? 'expanded' : 'collapsed'}`);
+                
+                // Apply inline styles to override any CSS issues
+                if (shouldBeExpanded) {
+                    accountPanel.style.width = '48px';
+                    accountPanel.style.padding = '12px';
+                    accountPanel.style.borderRight = '1px solid #e0e0e0';
+                    accountPanel.style.boxShadow = '6px 0 16px rgba(0, 0, 0, 0.12), 2px 0 6px rgba(0, 0, 0, 0.08)';
+                    accountPanel.style.transition = 'width 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), padding 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), border-right 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                                 } else {
+                     accountPanel.style.width = '20px';
+                     accountPanel.style.padding = '12px 8px';
+                     accountPanel.style.borderRight = 'none';
+                     accountPanel.style.boxShadow = '12px 0 40px 4px rgba(0, 0, 0, 0.25), 6px 0 16px rgba(0, 0, 0, 0.18)';
+                     accountPanel.style.transition = 'width 0.25s cubic-bezier(0.165, 0.84, 0.44, 1), padding 0.25s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.25s cubic-bezier(0.165, 0.84, 0.44, 1), border-right 0.25s cubic-bezier(0.165, 0.84, 0.44, 1)';
+                 }
+                
+                return true; // Force applied
+            }
+            
+            return false; // No force needed
+        }
+        
+        // Make it globally accessible
+        window.forceCorrectVisualState = forceCorrectVisualState;
+        
+        // Force correct expand button and sandbox bar positions
+        function forceCorrectPositions() {
+            const accountPanel = document.getElementById('accountPanel');
+            const expandButton = document.querySelector('.expandButton-container');
+            const sandboxBar = document.getElementById('sandboxIndicatorBar');
+            
+            if (!accountPanel) return false;
+            
+            const hasHoveredClass = accountPanel.classList.contains('hovered');
+            const isOpened = accountPanel.classList.contains('opened');
+            const isMouseActuallyOver = window.isMouseOverAccountPanel ? window.isMouseOverAccountPanel() : false;
+            const hasActivePopover = document.querySelector('.account-popover.show, .create-popover.show, .sandbox-popover.show');
+            
+            // Determine what the state SHOULD be
+            const shouldBeHovered = (isMouseActuallyOver || hasActivePopover) && !isOpened;
+            
+            let correctionMade = false;
+            
+                         // Force correct expand button position
+             if (expandButton) {
+                 const navPanel = document.getElementById('navPanel');
+                 const isNavExpanded = navPanel && navPanel.classList.contains('expanded');
+                 const currentLeft = window.getComputedStyle(expandButton).left;
+                 let expectedLeft;
+                 
+                 if (isOpened) {
+                     expectedLeft = isNavExpanded ? '440px' : '269px'; // Account panel opened
+                 } else if (shouldBeHovered) {
+                     expectedLeft = isNavExpanded ? '268px' : '97px'; // Account panel hovered
+                 } else {
+                     expectedLeft = isNavExpanded ? '240px' : '69px';  // Account panel collapsed
+                 }
+                 
+                 if (currentLeft !== expectedLeft) {
+                     debugLog('ForcePositions', `🔧 FORCING expand button position from ${currentLeft} to ${expectedLeft} (nav expanded: ${isNavExpanded})`);
+                     expandButton.style.left = expectedLeft;
+                     // Use timing that matches account panel state
+                     const accountPanel = document.getElementById('accountPanel');
+                     const isHovered = shouldBeHovered;
+                     if (isHovered) {
+                         expandButton.style.transition = 'left 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)'; // Slower to sync with panel
+                     } else {
+                         expandButton.style.transition = 'left 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)'; // Slower to sync with panel
+                     }
+                     correctionMade = true;
+                 }
+             }
+            
+            // Force correct sandbox bar position
+            if (sandboxBar && sandboxBar.style.display !== 'none') {
+                const currentLeft = window.getComputedStyle(sandboxBar).left;
+                const currentWidth = window.getComputedStyle(sandboxBar).width;
+                let expectedLeft, expectedWidth;
+                
+                if (isOpened) {
+                    expectedLeft = '220px';
+                    expectedWidth = 'calc(100% - 220px)';
+                } else if (shouldBeHovered) {
+                    expectedLeft = '48px';
+                    expectedWidth = 'calc(100% - 48px)';
+                } else {
+                    expectedLeft = '20px';
+                    expectedWidth = 'calc(100% - 20px)';
+                }
+                
+                if (currentLeft !== expectedLeft || currentWidth !== expectedWidth) {
+                    debugLog('ForcePositions', `🔧 FORCING sandbox bar position from left:${currentLeft} width:${currentWidth} to left:${expectedLeft} width:${expectedWidth}`);
+                    sandboxBar.style.left = expectedLeft;
+                    sandboxBar.style.width = expectedWidth;
+                    sandboxBar.style.transition = 'left 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                    correctionMade = true;
+                }
+            }
+            
+            return correctionMade;
+        }
+        
+        window.forceCorrectPositions = forceCorrectPositions;
+        
+        // Quick fix for the current expand button issue
+        window.fixExpandButton = function() {
+            const expandButton = document.querySelector('.expandButton-container');
+            const navPanel = document.getElementById('navPanel');
+            const isNavExpanded = navPanel && navPanel.classList.contains('expanded');
+            
+            if (expandButton) {
+                const correctLeft = isNavExpanded ? '240px' : '69px';
+                expandButton.style.left = correctLeft;
+                expandButton.style.display = 'flex';
+                expandButton.style.transition = 'left 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)';
+                console.log(`🔧 Expand button fixed - reset to ${correctLeft} (nav expanded: ${isNavExpanded})`);
+                return true;
+            }
+            console.log('❌ Expand button not found');
+            return false;
+        };
+        
+        // Add visual debug indicator
+        if (debugMode) {
+            const debugIndicator = document.createElement('div');
+            debugIndicator.id = 'debug-indicator';
+            debugIndicator.style.cssText = `
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                background: #ff4444;
+                color: white;
+                padding: 5px 10px;
+                border-radius: 3px;
+                font-size: 12px;
+                z-index: 10000;
+                font-family: monospace;
+            `;
+            debugIndicator.textContent = 'DEBUG MODE ON';
+            document.body.appendChild(debugIndicator);
+            
+            console.log('🔍 DEBUG MODE ENABLED');
+            console.log('📋 Use debugAccountPanelState() to inspect current state');
+            console.log('🕐 Use debugTransitionTimings() to check transition timings');
+            console.log('🛠️ Use forceResetAccountPanel() to force visual reset');
+            console.log('🔧 Use forceCorrectVisualState() to force immediate visual correction');
+            console.log('📐 Use forceCorrectPositions() to force expand button/sandbox bar positions');
+            console.log('🔲 Use fixExpandButton() to quickly fix missing expand button');
+            console.log('🔇 Use debugMode = false to disable debug logs');
+            console.log('🔊 Use debugMode = true to re-enable debug logs');
+            console.log('🎯 Try reproducing the issue and watch console logs');
+        }
+        
+        // Track mouse position globally
+        document.addEventListener('mousemove', function(e) {
+            lastMousePosition.x = e.clientX;
+            lastMousePosition.y = e.clientY;
+        });
+        
+        // Debug logging function
+        function debugLog(source, message, data = {}) {
+            if (window.debugMode) {
+                console.log(`🔍 [${source}] ${message}`, data);
+            }
+        }
+        
+        // Function to check if mouse is actually over account panel using coordinates
+        window.isMouseOverAccountPanel = function() {
+            const accountPanel = document.getElementById('accountPanel');
+            if (!accountPanel) return false;
+            
+            const rect = accountPanel.getBoundingClientRect();
+            const { x, y } = lastMousePosition;
+            const isOver = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+            
+            debugLog('MouseTracking', `Mouse at (${x}, ${y}), Panel bounds: ${Math.round(rect.left)}-${Math.round(rect.right)}, ${Math.round(rect.top)}-${Math.round(rect.bottom)}, Over: ${isOver}`);
+            
+            return isOver;
+        };
+        
+        // Force sync visual state with JavaScript state
+        window.syncAccountPanelState = function() {
+            const accountPanel = document.getElementById('accountPanel');
+            if (!accountPanel) return;
+            
+            const hasHoveredClass = accountPanel.classList.contains('hovered');
+            const isOpened = accountPanel.classList.contains('opened');
+            const hasPopoverOpenClass = accountPanel.classList.contains('popover-open');
+            const isMouseActuallyOver = window.isMouseOverAccountPanel();
+            const hasActivePopover = document.querySelector('.account-popover.show, .create-popover.show, .sandbox-popover.show');
+            
+            debugLog('StateSync', 'Checking account panel state', {
+                hasHoveredClass,
+                isOpened,
+                hasPopoverOpenClass,
+                isMouseActuallyOver,
+                hasActivePopover: !!hasActivePopover,
+                popoverType: hasActivePopover ? hasActivePopover.className : 'none'
+            });
+            
+            let cleanupPerformed = false;
+            
+            // Cleanup 1: Remove hovered class if mouse isn't over panel and no popover is open
+            if (hasHoveredClass && !isMouseActuallyOver && !isOpened && !hasActivePopover) {
+                debugLog('StateSync', '🚨 HOVER MISMATCH - Removing hovered class!');
+                accountPanel.classList.remove('hovered');
+                cleanupPerformed = true;
+            }
+            
+            // Cleanup 2: Remove popover-open class if no popover is actually open
+            if (hasPopoverOpenClass && !hasActivePopover) {
+                debugLog('StateSync', '🚨 POPOVER CLASS STUCK - Removing popover-open class!');
+                accountPanel.classList.remove('popover-open');
+                cleanupPerformed = true;
+            }
+            
+            if (cleanupPerformed) {
+                // Force a reflow to ensure CSS changes take effect immediately
+                accountPanel.offsetHeight;
+                
+                // Update related states
+                setTimeout(() => {
+                    const updateTrulyCollapsedState = window.updateTrulyCollapsedState;
+                    if (updateTrulyCollapsedState) updateTrulyCollapsedState();
+                    if (window.updateSandboxBarPosition) window.updateSandboxBarPosition();
+                }, 25);
+                
+                debugLog('StateSync', '✅ Cleanup completed');
+                return true; // Cleanup performed
+            }
+            
+            debugLog('StateSync', '✅ State is correct, no cleanup needed');
+            return false; // No cleanup needed
+        };
+
+        // Prevent account panel collapse when popovers are open
+        function setupPopoverAccountPanelControl() {
+            const accountPanel = document.getElementById('accountPanel');
+            const popovers = document.querySelectorAll('.account-popover, .create-popover, .sandbox-popover');
+            
+            if (!accountPanel) return;
+            
+            // Function to check if any popover is open
+            function checkPopoverState() {
+                const anyPopoverOpen = Array.from(popovers).some(popover => 
+                    popover.classList.contains('show')
+                );
+                
+                debugLog('checkPopoverState', 'Checking popover state', {
+                    anyPopoverOpen,
+                    currentPopoverOpenClass: accountPanel.classList.contains('popover-open'),
+                    activePopovers: Array.from(popovers).filter(p => p.classList.contains('show')).map(p => p.className)
+                });
+                
+                if (anyPopoverOpen) {
+                    if (!accountPanel.classList.contains('popover-open')) {
+                        debugLog('checkPopoverState', '✅ Adding popover-open class');
+                        accountPanel.classList.add('popover-open');
+                    }
+                } else {
+                    if (accountPanel.classList.contains('popover-open')) {
+                        debugLog('checkPopoverState', '🧹 Removing popover-open class');
+                        accountPanel.classList.remove('popover-open');
+                    }
+                    // When popover closes, check if we should add truly-collapsed class
+                    updateTrulyCollapsedState();
+                }
+            }
+            
+            // Function to update truly-collapsed state based on actual panel state
+            function updateTrulyCollapsedState() {
+                const isHovered = accountPanel.classList.contains('hovered');
+                const isOpened = accountPanel.classList.contains('opened');
+                const isPopoverOpen = accountPanel.classList.contains('popover-open');
+                
+                // Panel is truly collapsed when not hovered, not opened, and no popover open
+                if (!isHovered && !isOpened && !isPopoverOpen) {
+                    accountPanel.classList.add('truly-collapsed');
+                } else {
+                    accountPanel.classList.remove('truly-collapsed');
+                }
+            }
+            
+            // Make function globally accessible
+            window.updateTrulyCollapsedState = updateTrulyCollapsedState;
+            
+            // Add mouse event listeners to track hover state with JavaScript
+            accountPanel.addEventListener('mouseenter', function() {
+                debugLog('mouseenter', 'Mouse entered account panel', {
+                    isOpened: accountPanel.classList.contains('opened'),
+                    hasHoveredClass: accountPanel.classList.contains('hovered')
+                });
+                
+                // Only apply hover if not already opened
+                if (!accountPanel.classList.contains('opened')) {
+                    debugLog('mouseenter', '✅ Adding hovered class');
+                    accountPanel.classList.add('hovered');
+                    accountPanel.classList.remove('truly-collapsed');
+                    // Update sandbox bar position if function is available
+                    if (window.updateSandboxBarPosition) {
+                        window.updateSandboxBarPosition();
+                    }
+                } else {
+                    debugLog('mouseenter', '⏸️ Panel already opened - not adding hover');
+                }
+            });
+            
+            // Force close hover state when hovering over other areas
+            function forceCloseHoverState() {
+                if (accountPanel.classList.contains('hovered') && !accountPanel.classList.contains('opened')) {
+                    accountPanel.classList.remove('hovered');
+                    setTimeout(updateTrulyCollapsedState, 25);
+                    if (window.updateSandboxBarPosition) {
+                        setTimeout(window.updateSandboxBarPosition, 25);
+                    }
+                }
+            }
+            
+            // Add hover listeners to main content areas to force close account panel
+            const mainContent = document.querySelector('.main-content');
+            const navPanel = document.getElementById('navPanel');
+            const expandButton = document.querySelector('.expandButton-container');
+            
+            if (mainContent) {
+                mainContent.addEventListener('mouseenter', forceCloseHoverState);
+            }
+            
+            if (navPanel) {
+                navPanel.addEventListener('mouseenter', forceCloseHoverState);
+            }
+            
+            if (expandButton) {
+                expandButton.addEventListener('mouseenter', forceCloseHoverState);
+            }
+            
+                        // Global mouseover handler to close account panel when hovering anywhere else
+            document.addEventListener('mouseover', function(e) {
+                // Skip if account panel is opened (only handle hover state)
+                if (accountPanel.classList.contains('opened')) return;
+                
+                // Skip if mouse is over the account panel or its children
+                if (accountPanel.contains(e.target)) return;
+                
+                // Check if mouse is over any active popovers
+                const activePopovers = document.querySelectorAll('.account-popover.show, .create-popover.show, .sandbox-popover.show');
+                let isOverActivePopover = false;
+                for (let popover of activePopovers) {
+                    if (popover.contains(e.target)) {
+                        isOverActivePopover = true;
+                        break;
+                    }
+                }
+                
+                // If mouse is over an active popover, don't close hover state yet
+                if (isOverActivePopover) return;
+                
+                // Force close hover state if mouse is anywhere else
+                // This is the key fix for the "roll off popover" scenario
+                if (accountPanel.classList.contains('hovered')) {
+                    accountPanel.classList.remove('hovered');
+                    setTimeout(updateTrulyCollapsedState, 25);
+                    if (window.updateSandboxBarPosition) {
+                        setTimeout(window.updateSandboxBarPosition, 25);
+                    }
+                }
+            });
+            
+            // Additional robust cleanup - check on any mouse movement
+            document.addEventListener('mousemove', function(e) {
+                // Only check if we have hover state but no popover open and panel not opened
+                if (!accountPanel.classList.contains('hovered') || 
+                    accountPanel.classList.contains('opened') ||
+                    document.querySelector('.account-popover.show, .create-popover.show, .sandbox-popover.show')) {
+                    return;
+                }
+                
+                // Use our robust mouse tracking to verify position
+                const isActuallyHovered = window.isMouseOverAccountPanel ? window.isMouseOverAccountPanel() : false;
+                
+                if (!isActuallyHovered) {
+                    debugLog('mousemove', '🚨 STUCK HOVER DETECTED on mousemove - forcing cleanup');
+                    // Mouse is clearly outside account panel but hover state is stuck - force cleanup
+                    if (window.syncAccountPanelState) {
+                        window.syncAccountPanelState();
+                    }
+                    // Also force correct visual state immediately
+                    if (window.forceCorrectVisualState) {
+                        window.forceCorrectVisualState();
+                    }
+                    // And force correct positions
+                    if (window.forceCorrectPositions) {
+                        window.forceCorrectPositions();
+                    }
+                }
+            });
+            
+            // Also close on mouseleave from account panel (backup behavior)
+            accountPanel.addEventListener('mouseleave', function() {
+                debugLog('mouseleave', '🚪 Mouse left account panel - removing hover', {
+                    hasHoveredClass: accountPanel.classList.contains('hovered'),
+                    isOpened: accountPanel.classList.contains('opened')
+                });
+                
+                // Remove hovered class immediately
+                accountPanel.classList.remove('hovered');
+                // Small delay to allow for popover interactions before updating truly-collapsed
+                setTimeout(updateTrulyCollapsedState, 100);
+                // Update sandbox bar position if function is available
+                if (window.updateSandboxBarPosition) {
+                    setTimeout(window.updateSandboxBarPosition, 100);
+                }
+            });
+            
+            // Use MutationObserver to watch for class changes on popovers
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        checkPopoverState();
+                        
+                        // CRITICAL: Additional hover state cleanup when popover state changes
+                        // This catches edge cases where popovers close but hover state gets stuck
+                        setTimeout(() => {
+                            const isActuallyHovered = window.isMouseOverAccountPanel ? window.isMouseOverAccountPanel() : false;
+                            const isOpened = accountPanel.classList.contains('opened');
+                            const hasHoveredClass = accountPanel.classList.contains('hovered');
+                            
+                            // If we have hovered class but mouse isn't actually over panel, clean it up
+                            if (hasHoveredClass && !isActuallyHovered && !isOpened) {
+                                accountPanel.classList.remove('hovered');
+                                updateTrulyCollapsedState();
+                                if (window.updateSandboxBarPosition) {
+                                    window.updateSandboxBarPosition();
+                                }
+                            }
+                        }, 75);
+                    }
+                });
+            });
+            
+            // Observe each popover for class changes
+            popovers.forEach(popover => {
+                observer.observe(popover, {
+                    attributes: true,
+                    attributeFilter: ['class']
+                });
+            });
+            
+            // Initial check
+            checkPopoverState();
+            updateTrulyCollapsedState();
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupPopoverAccountPanelControl);
+        } else {
+            setupPopoverAccountPanelControl();
+        }
+        
+        // Debug transition timings - define globally and immediately
+        function debugTransitionTimings() {
+            const accountPanel = document.getElementById('accountPanel');
+            const navPanel = document.getElementById('navPanel');
+            const expandButton = document.querySelector('.expandButton-container');
+            
+            console.log('🕐 TRANSITION TIMING DEBUG:');
+            console.log('==========================');
+            
+            if (accountPanel) {
+                const accountStyle = window.getComputedStyle(accountPanel);
+                console.log('🔲 ACCOUNT PANEL TRANSITION:', accountStyle.transition);
+                
+                // Check for different states
+                const hasHovered = accountPanel.classList.contains('hovered');
+                const isOpened = accountPanel.classList.contains('opened');
+                console.log('  - Current State:', { hovered: hasHovered, opened: isOpened });
+            }
+            
+            if (navPanel) {
+                const navStyle = window.getComputedStyle(navPanel);
+                console.log('🔲 NAV PANEL TRANSITION:', navStyle.transition);
+                
+                const isExpanded = navPanel.classList.contains('expanded');
+                console.log('  - Current State:', { expanded: isExpanded });
+            }
+            
+            if (expandButton) {
+                const expandStyle = window.getComputedStyle(expandButton);
+                console.log('🔲 EXPAND BUTTON TRANSITION:', expandStyle.transition);
+                console.log('  - Current Left Position:', expandStyle.left);
+            } else {
+                console.log('❌ Expand button not found');
+            }
+        }
+        
+        window.debugTransitionTimings = debugTransitionTimings;
+
+        // Debug inspection function
+        window.debugAccountPanelState = function() {
+            const accountPanel = document.getElementById('accountPanel');
+            const expandButton = document.querySelector('.expandButton-container');
+            const sandboxBar = document.getElementById('sandboxIndicatorBar');
+            
+            if (!accountPanel) {
+                console.log('❌ Account panel not found');
+                return;
+            }
+            
+            const hasHoveredClass = accountPanel.classList.contains('hovered');
+            const isOpened = accountPanel.classList.contains('opened');
+            const isTrulyCollapsed = accountPanel.classList.contains('truly-collapsed');
+            const isPopoverOpen = accountPanel.classList.contains('popover-open');
+            const isMouseActuallyOver = window.isMouseOverAccountPanel();
+            const activePopovers = document.querySelectorAll('.account-popover.show, .create-popover.show, .sandbox-popover.show');
+            const cssHoverState = accountPanel.matches(':hover');
+            
+            // Get computed styles to see what's actually rendered
+            const computedStyle = window.getComputedStyle(accountPanel);
+            const currentWidth = computedStyle.width;
+            const currentPadding = computedStyle.padding;
+            const currentBoxShadow = computedStyle.boxShadow;
+            const currentBorderRight = computedStyle.borderRight;
+            
+            // Get expand button position
+            let expandButtonLeft = 'N/A';
+            if (expandButton) {
+                const expandButtonStyle = window.getComputedStyle(expandButton);
+                expandButtonLeft = expandButtonStyle.left;
+            }
+            
+            // Get sandbox bar position  
+            let sandboxBarLeft = 'N/A';
+            let sandboxBarWidth = 'N/A';
+            if (sandboxBar) {
+                const sandboxBarStyle = window.getComputedStyle(sandboxBar);
+                sandboxBarLeft = sandboxBarStyle.left;
+                sandboxBarWidth = sandboxBarStyle.width;
+            }
+            
+            console.log('🔍 ACCOUNT PANEL STATE DEBUG:');
+            console.log('================================');
+            console.log('JavaScript Classes:', {
+                hovered: hasHoveredClass,
+                opened: isOpened,
+                trulyCollapsed: isTrulyCollapsed,
+                popoverOpen: isPopoverOpen,
+                hasPopoverOpenClass: accountPanel.classList.contains('popover-open')
+            });
+            console.log('Mouse Position:', lastMousePosition);
+            console.log('Mouse Over Panel (coords):', isMouseActuallyOver);
+            console.log('CSS :hover state:', cssHoverState);
+            console.log('Active Popovers:', Array.from(activePopovers).map(p => p.className));
+            console.log('ALL Classes:', accountPanel.className);
+            console.log('💅 COMPUTED VISUAL STYLES:');
+            console.log('- Width:', currentWidth);
+            console.log('- Padding:', currentPadding);
+            console.log('- Box Shadow:', currentBoxShadow);
+            console.log('- Border Right:', currentBorderRight);
+            console.log('🔲 EXPAND BUTTON & SANDBOX BAR:');
+            console.log('- Nav Panel Expanded:', isNavExpanded);
+            console.log('- Expand Button Left:', expandButtonLeft);
+            console.log('- Sandbox Bar Left:', sandboxBarLeft);
+            console.log('- Sandbox Bar Width:', sandboxBarWidth);
+            
+            // Analyze expected vs actual state  
+            const expectedWidth = hasHoveredClass && !isOpened ? '48px' : '20px';
+            const actuallyExpanded = currentWidth !== '20px';
+            
+            // Calculate expected expand button position based on nav panel state
+            const navPanel = document.getElementById('navPanel');
+            const isNavExpanded = navPanel && navPanel.classList.contains('expanded');
+            let expectedExpandButtonLeft;
+            if (isOpened) {
+                expectedExpandButtonLeft = isNavExpanded ? '440px' : '269px';
+            } else if (hasHoveredClass) {
+                expectedExpandButtonLeft = isNavExpanded ? '268px' : '97px';
+            } else {
+                expectedExpandButtonLeft = isNavExpanded ? '240px' : '69px'; // Nav expansion DOES affect collapsed state
+            }
+            
+            console.log('📊 ANALYSIS:');
+            console.log('- Expected Width:', expectedWidth);
+            console.log('- Actually Expanded:', actuallyExpanded);
+            console.log('- Expected Expand Button Left:', expectedExpandButtonLeft);
+            console.log('- CSS :hover vs JS .hovered mismatch:', cssHoverState !== hasHoveredClass);
+            
+            if (hasHoveredClass && !isMouseActuallyOver && !isOpened && activePopovers.length === 0) {
+                console.log('🚨 ISSUE DETECTED: Hovered class present but conditions not met!');
+            } else if (cssHoverState !== hasHoveredClass) {
+                console.log('🚨 CSS/JS MISMATCH: CSS :hover state differs from JavaScript .hovered class!');
+            } else if (actuallyExpanded && !hasHoveredClass && !isOpened) {
+                console.log('🚨 VISUAL ISSUE: Panel appears expanded but no hover/open classes present!');
+            } else if (expandButtonLeft !== 'N/A' && expandButtonLeft !== expectedExpandButtonLeft) {
+                console.log('🚨 EXPAND BUTTON MISMATCH: Button position doesn\'t match expected position!');
+            } else {
+                console.log('✅ State appears correct');
+            }
+        };
+        
+        // Force reset function to manually fix visual state
+        window.forceResetAccountPanel = function() {
+            const accountPanel = document.getElementById('accountPanel');
+            if (!accountPanel) {
+                console.log('❌ Account panel not found');
+                return;
+            }
+            
+            console.log('🛠️ FORCING ACCOUNT PANEL RESET...');
+            
+            // Remove all hover/state classes
+            accountPanel.classList.remove('hovered', 'opened', 'popover-open');
+            accountPanel.classList.add('truly-collapsed');
+            
+            // Force a DOM reflow to apply changes immediately
+            accountPanel.offsetHeight;
+            
+            // Close any open popovers
+            const popovers = document.querySelectorAll('.account-popover.show, .create-popover.show, .sandbox-popover.show');
+            popovers.forEach(popover => {
+                popover.classList.remove('show');
+            });
+            
+            // Remove popover-active classes
+            const triggers = document.querySelectorAll('#accountSwitcher, #createTrigger, #sandboxTrigger');
+            triggers.forEach(trigger => {
+                if (trigger) trigger.classList.remove('popover-active');
+            });
+            
+            // Force sandbox bar update
+            if (window.updateSandboxBarPosition) {
+                setTimeout(window.updateSandboxBarPosition, 50);
+            }
+            
+            // Force correct positions
+            if (window.forceCorrectPositions) {
+                setTimeout(window.forceCorrectPositions, 75);
+            }
+            
+            console.log('✅ Force reset completed');
+            
+            // Check if it worked
+            setTimeout(() => {
+                window.debugAccountPanelState();
+            }, 100);
+        };
+        
+        // Nuclear periodic cleanup - force correct visual state
+        setInterval(() => {
+            // First try normal cleanup
+            if (window.syncAccountPanelState) {
+                const cleaned = window.syncAccountPanelState();
+                if (cleaned) {
+                    debugLog('PeriodicCleanup', '🧹 Periodic cleanup performed');
+                }
+            }
+            
+            // Then force correct visual state regardless of CSS classes
+            if (window.forceCorrectVisualState) {
+                const forced = window.forceCorrectVisualState();
+                if (forced) {
+                    debugLog('PeriodicCleanup', '🔧 Visual state force-corrected');
+                }
+            }
+            
+            // Finally force correct positions for expand button and sandbox bar
+            if (window.forceCorrectPositions) {
+                const positionsFixed = window.forceCorrectPositions();
+                if (positionsFixed) {
+                    debugLog('PeriodicCleanup', '🔧 Positions force-corrected');
+                }
+            }
+        }, 200); // Check every 0.2 seconds - very aggressive
+
+        // Setup sandbox bar responsiveness to account panel state changes
+        function setupSandboxBarPositioning() {
+            const accountPanel = document.getElementById('accountPanel');
+            const sandboxBar = document.getElementById('sandboxIndicatorBar');
+            const dashboard = document.querySelector('.dashboard');
+            
+            if (!accountPanel || !sandboxBar || !dashboard) return;
+            
+            function updateSandboxBarPosition() {
+                // Only update if sandbox bar is visible
+                if (sandboxBar.style.display === 'none') return;
+                
+                const isHovered = accountPanel.classList.contains('hovered');
+                const isOpened = accountPanel.classList.contains('opened');
+                
+                // Update CSS classes on dashboard for browser compatibility
+                dashboard.classList.toggle('account-panel-hovered', isHovered && !isOpened);
+                dashboard.classList.toggle('account-panel-opened', isOpened);
+                
+                if (isOpened) {
+                    // Account panel is opened (220px)
+                    sandboxBar.style.left = '220px';
+                    sandboxBar.style.width = 'calc(100% - 220px)';
+                } else if (isHovered) {
+                    // Account panel is hovered (48px)
+                    sandboxBar.style.left = '48px';
+                    sandboxBar.style.width = 'calc(100% - 48px)';
+                } else {
+                    // Account panel is collapsed (20px)
+                    sandboxBar.style.left = '20px';
+                    sandboxBar.style.width = 'calc(100% - 20px)';
+                }
+            }
+            
+            // Expose function globally for use in other parts of the application
+            window.updateSandboxBarPosition = updateSandboxBarPosition;
+            
+            // Listen for hover events
+            accountPanel.addEventListener('mouseenter', updateSandboxBarPosition);
+            accountPanel.addEventListener('mouseleave', updateSandboxBarPosition);
+            
+            // Listen for opened state changes
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        updateSandboxBarPosition();
+                    }
+                });
+            });
+            
+            observer.observe(accountPanel, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+            
+            // Initial position update
+            updateSandboxBarPosition();
+        }
+        
+        // Initialize sandbox bar positioning
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupSandboxBarPositioning);
+        } else {
+            setupSandboxBarPositioning();
+        }
+
+        // Global function to reset all account panel states (emergency cleanup)
+        function resetAccountPanelState() {
+            const accountPanel = document.getElementById('accountPanel');
+            if (accountPanel) {
+                // Force remove all potentially stuck states, but only if not currently being hovered
+                const isCurrentlyHovered = accountPanel.matches(':hover');
+                const isOpened = accountPanel.classList.contains('opened');
+                
+                if (!isCurrentlyHovered && !isOpened) {
+                    accountPanel.classList.remove('hovered');
+                    accountPanel.classList.remove('popover-open');
+                    accountPanel.classList.add('truly-collapsed');
+                } else if (isCurrentlyHovered && !isOpened) {
+                    // If actually being hovered, ensure hover state is correct
+                    accountPanel.classList.add('hovered');
+                    accountPanel.classList.remove('truly-collapsed');
+                }
+                
+                // Update sandbox bar position
+                if (window.updateSandboxBarPosition) {
+                    window.updateSandboxBarPosition();
+                }
+            }
+        }
+        
+        // Expose reset function globally for debugging/emergency use
+        window.resetAccountPanelState = resetAccountPanelState;
+        
+        // Auto-cleanup on window focus (helps with edge cases where hover gets stuck)
+        window.addEventListener('focus', function() {
+            setTimeout(resetAccountPanelState, 100);
+        });
+    </script>
 </body>
 </html> 
