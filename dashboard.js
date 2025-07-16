@@ -481,7 +481,7 @@ class Dashboard {
             this._log('warn', 'No account name available for sandbox update');
             return;
         }
-        
+
         // Reduce debounce delay and ensure immediate execution when needed
         if (this._debounceTimers['updateSandboxes']) {
             // If there's already a pending update, execute immediately
@@ -522,7 +522,7 @@ class Dashboard {
         if (containerElement) {
             containerElement.innerHTML = '';
             containerFragment = document.createDocumentFragment();
-        }
+            }
         
         if (popoverContentElement) {
             // Clear existing sandbox items from popover efficiently

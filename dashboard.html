@@ -2313,21 +2313,42 @@
                     });
                     
                     if (!isOpened) {
-                        // Use robust mouse position checking instead of :hover
-                        const isActuallyHovered = window.isMouseOverAccountPanel ? window.isMouseOverAccountPanel() : false;
+                        // ENHANCED: Force clear hover state first, then re-evaluate
+                        // This prevents the stuck state by ensuring a clean slate
+                        accountPanel.classList.remove('hovered');
                         
-                        if (!isActuallyHovered) {
-                            debugLog('hideAccountPopover', '🧹 Mouse not over panel - initiating cleanup');
-                            // Mouse has moved away - clean up hover state
-                            if (window.syncAccountPanelState) {
-                                window.syncAccountPanelState();
+                        // Force immediate state update
+                        const updateTrulyCollapsedState = window.updateTrulyCollapsedState;
+                        if (updateTrulyCollapsedState) updateTrulyCollapsedState();
+                        
+                        // Small delay then check if mouse is actually over panel
+                        setTimeout(() => {
+                            // Use CSS :hover as primary check, coordinate check as backup
+                            const cssHover = accountPanel.matches(':hover');
+                            const coordHover = window.isMouseOverAccountPanel ? window.isMouseOverAccountPanel() : false;
+                            const actuallyHovered = cssHover || coordHover;
+                            
+                            debugLog('hideAccountPopover', 'Re-evaluating hover after cleanup', {
+                                cssHover,
+                                coordHover,
+                                actuallyHovered
+                            });
+                            
+                            if (actuallyHovered) {
+                                debugLog('hideAccountPopover', '✅ Mouse confirmed over panel - restoring hover');
+                                accountPanel.classList.add('hovered');
+                                if (updateTrulyCollapsedState) updateTrulyCollapsedState();
+                                if (window.updateSandboxBarPosition) {
+                                    window.updateSandboxBarPosition();
+                                }
+                            } else {
+                                debugLog('hideAccountPopover', '🧹 Mouse confirmed away - keeping collapsed');
+                                // Run additional cleanup to ensure consistent state
+                                if (window.syncAccountPanelState) {
+                                    window.syncAccountPanelState();
+                                }
                             }
-                            if (window.resetAccountPanelState) {
-                                window.resetAccountPanelState();
-                            }
-                        } else {
-                            debugLog('hideAccountPopover', '✅ Mouse still over panel - keeping hover state');
-                        }
+                        }, 25);
                     }
                 }
             }, 50);
