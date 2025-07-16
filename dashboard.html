@@ -1248,6 +1248,223 @@
         .nav-component.account-hidden {
             display: none !important;
         }
+
+        /* Create Business Account Modal */
+        .create-account-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1003;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .create-account-modal.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .create-account-content {
+            background: #ffffff;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 520px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.2s ease;
+        }
+
+        .create-account-modal.show .create-account-content {
+            transform: scale(1);
+        }
+
+        .create-account-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px 16px 24px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .create-account-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .create-account-body {
+            padding: 20px 24px 24px 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #ffffff;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #007aff;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #999;
+        }
+
+        .form-help {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .preview-section {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .preview-section h4 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .account-preview {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .preview-account-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+
+        .preview-account-item .accountAvatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 600;
+            color: white;
+            margin-right: 8px;
+        }
+
+        .preview-account-item .account-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .create-account-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn-primary {
+            background: #007aff;
+            border: 1px solid #007aff;
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #0056cc;
+            border-color: #0056cc;
+        }
+
+        .btn-primary:disabled {
+            background: #e9ecef;
+            border-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            color: #596171;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            border-color: #ced4da;
+            color: #495057;
+        }
+
+        /* Create account form responsive */
+        @media (max-width: 768px) {
+            .create-account-content {
+                width: 95%;
+                margin: 20px;
+            }
+
+            .create-account-actions {
+                flex-direction: column;
+            }
+
+            .btn-primary, .btn-secondary {
+                width: 100%;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -3001,8 +3218,19 @@
             // Handle create popover item clicks
             document.querySelectorAll('.create-popover-item').forEach(item => {
                 item.addEventListener('click', function() {
-                    console.log('Create action:', this.querySelector('span').textContent);
+                    const action = this.querySelector('span').textContent;
+                    console.log('Create action:', action);
                     hideCreatePopover();
+                    
+                    if (action === 'Create account') {
+                        // Open the create account modal
+                        if (window.dashboard) {
+                            window.dashboard.openCreateAccountModal();
+                        }
+                    } else if (action === 'Create organization') {
+                        // Handle organization creation (could be implemented later)
+                        console.log('Organization creation not yet implemented');
+                    }
                 });
             });
 
@@ -3429,6 +3657,41 @@
                 <div class="account-visibility-actions">
                     <button class="btn-secondary" id="showAllAccounts">Show All</button>
                     <button class="btn-secondary" id="hideAllAccounts">Hide All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Business Account Modal -->
+    <div class="create-account-modal" id="createAccountModal">
+        <div class="create-account-content">
+            <div class="create-account-header">
+                <h3>Create New Business Account</h3>
+                <button class="close-button" id="closeCreateAccountModal">
+                    <svg viewBox="0 0 16 16" width="16" height="16">
+                        <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="create-account-body">
+                <div class="form-group">
+                    <label for="businessName">Business Name</label>
+                    <input type="text" id="businessName" placeholder="Enter business name (e.g., Acme Corp)" class="form-input" maxlength="50">
+                </div>
+                <div class="form-group">
+                    <label for="subAccountCount">Number of Sub-Accounts</label>
+                    <input type="number" id="subAccountCount" min="0" max="10" value="2" class="form-input">
+                    <small class="form-help">Sub-accounts will be named automatically based on your business (0-10)</small>
+                </div>
+                <div class="preview-section" id="previewSection" style="display: none;">
+                    <h4>Preview</h4>
+                    <div class="account-preview" id="accountPreview">
+                        <!-- Account previews will be shown here -->
+                    </div>
+                </div>
+                <div class="create-account-actions">
+                    <button class="btn-secondary" id="cancelCreateAccount">Cancel</button>
+                    <button class="btn-primary" id="confirmCreateAccount" disabled>Create Account</button>
                 </div>
             </div>
         </div>

@@ -121,6 +121,9 @@ class Dashboard {
         // Initialize account visibility functionality
         this.initAccountVisibility();
         
+        // Initialize create account modal functionality
+        this.initCreateAccountModal();
+        
         // Expose debugging functions globally
         window.debugSandboxes = () => this.debugSandboxStorage();
         window.clearSandboxes = () => this.clearAllSandboxData();
@@ -1284,6 +1287,345 @@ class Dashboard {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && visibilityModal.classList.contains('show')) {
                 visibilityModal.classList.remove('show');
+            }
+        });
+    }
+
+    // Business Account Creation
+    getAvailableColors() {
+        return ['color-1', 'color-2', 'color-3', 'color-4', 'color-5', 'color-6'];
+    }
+
+    getUsedColors() {
+        const usedColors = [];
+        const accountElements = document.querySelectorAll('.account-panel .business-account');
+        
+        accountElements.forEach(element => {
+            const color = element.dataset.accountColor;
+            if (color && !usedColors.includes(color)) {
+                usedColors.push(color);
+            }
+        });
+        
+        return usedColors;
+    }
+
+    getNextAvailableColor() {
+        const availableColors = this.getAvailableColors();
+        const usedColors = this.getUsedColors();
+        
+        // Find first unused color
+        for (const color of availableColors) {
+            if (!usedColors.includes(color)) {
+                return color;
+            }
+        }
+        
+        // If all colors are used, cycle through them
+        return availableColors[usedColors.length % availableColors.length];
+    }
+
+    generateAccountInitials(accountName) {
+        if (!accountName || accountName.trim().length === 0) {
+            return 'AC';
+        }
+        
+        const cleanName = accountName.trim();
+        const words = cleanName.split(/\s+/);
+        
+        if (words.length === 1) {
+            // Single word - take first two characters
+            return cleanName.substring(0, 2).toUpperCase();
+        } else {
+            // Multiple words - take first letter of each word (up to 2)
+            return words.slice(0, 2).map(word => word.charAt(0).toUpperCase()).join('');
+        }
+    }
+
+    generateSubAccountNames(businessName, count) {
+        if (count <= 0) return [];
+        
+        const templates = [
+            `${businessName} Operations`,
+            `${businessName} Sales`,
+            `${businessName} Marketing`,
+            `${businessName} Development`,
+            `${businessName} Support`,
+            `${businessName} Finance`,
+            `${businessName} HR`,
+            `${businessName} Legal`,
+            `${businessName} Analytics`,
+            `${businessName} Production`
+        ];
+        
+        // Return the first 'count' templates, or cycle if we need more
+        const subAccounts = [];
+        for (let i = 0; i < count; i++) {
+            if (i < templates.length) {
+                subAccounts.push(templates[i]);
+            } else {
+                // If we need more than templates, add numbered accounts
+                subAccounts.push(`${businessName} Dept ${i - templates.length + 1}`);
+            }
+        }
+        
+        return subAccounts;
+    }
+
+    previewAccounts(businessName, subAccountCount) {
+        const accounts = [];
+        
+        if (!businessName || businessName.trim().length === 0) {
+            return accounts;
+        }
+        
+        const cleanBusinessName = businessName.trim();
+        
+        // Add the main business account
+        const mainColor = this.getNextAvailableColor();
+        accounts.push({
+            name: cleanBusinessName,
+            initials: this.generateAccountInitials(cleanBusinessName),
+            color: mainColor,
+            isMain: true
+        });
+        
+        // Add sub-accounts if requested
+        if (subAccountCount > 0) {
+            const subAccountNames = this.generateSubAccountNames(cleanBusinessName, subAccountCount);
+            const availableColors = this.getAvailableColors();
+            const usedColors = this.getUsedColors();
+            usedColors.push(mainColor); // Don't reuse the main account color
+            
+            subAccountNames.forEach((subName, index) => {
+                // Assign colors, cycling through available ones
+                let colorIndex = (usedColors.length + index) % availableColors.length;
+                let color = availableColors[colorIndex];
+                
+                accounts.push({
+                    name: subName,
+                    initials: this.generateAccountInitials(subName),
+                    color: color,
+                    isMain: false
+                });
+            });
+        }
+        
+        return accounts;
+    }
+
+    updateAccountPreview() {
+        const businessNameInput = document.getElementById('businessName');
+        const subAccountCountInput = document.getElementById('subAccountCount');
+        const previewSection = document.getElementById('previewSection');
+        const accountPreview = document.getElementById('accountPreview');
+        const confirmButton = document.getElementById('confirmCreateAccount');
+        
+        const businessName = businessNameInput?.value?.trim() || '';
+        const subAccountCount = parseInt(subAccountCountInput?.value || 0);
+        
+        if (businessName.length === 0) {
+            previewSection.style.display = 'none';
+            confirmButton.disabled = true;
+            return;
+        }
+        
+        const accounts = this.previewAccounts(businessName, subAccountCount);
+        
+        // Show preview
+        previewSection.style.display = 'block';
+        accountPreview.innerHTML = '';
+        
+        accounts.forEach(account => {
+            const accountItem = document.createElement('div');
+            accountItem.className = 'preview-account-item';
+            accountItem.innerHTML = `
+                <div class="accountAvatar ${account.color}">${account.initials}</div>
+                <span class="account-name">${account.name}${account.isMain ? ' (Main)' : ''}</span>
+            `;
+            accountPreview.appendChild(accountItem);
+        });
+        
+        // Enable confirm button
+        confirmButton.disabled = false;
+    }
+
+    createBusinessAccounts(businessName, subAccountCount) {
+        const accounts = this.previewAccounts(businessName, subAccountCount);
+        
+        if (accounts.length === 0) {
+            console.error('No accounts to create');
+            return;
+        }
+        
+        // Get the account panel and find insertion point
+        const accountPanel = document.querySelector('.account-panel .nav-group');
+        if (!accountPanel) {
+            console.error('Account panel not found');
+            return;
+        }
+        
+        // Find the settings component (last item) to insert before it
+        const settingsComponent = accountPanel.querySelector('[data-tooltip="Settings"]');
+        
+        accounts.forEach((account, index) => {
+            const accountElement = document.createElement('div');
+            accountElement.className = 'nav-component business-account';
+            accountElement.setAttribute('data-tooltip', account.name);
+            accountElement.setAttribute('data-account-name', account.name);
+            accountElement.setAttribute('data-account-initials', account.initials);
+            accountElement.setAttribute('data-account-color', account.color);
+            
+            // If this is the main account and we have sub-accounts, make it an organization
+            if (account.isMain && subAccountCount > 0) {
+                accountElement.classList.add('organization');
+                const orgId = account.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                accountElement.setAttribute('data-organization', orgId);
+                
+                // Store sub-accounts in organization accounts structure
+                const subAccounts = accounts.slice(1).map(subAccount => ({
+                    name: subAccount.name,
+                    initials: subAccount.initials,
+                    color: subAccount.color
+                }));
+                
+                // Get existing organization accounts or create new structure
+                const existingOrgAccounts = window.organizationAccounts || {};
+                existingOrgAccounts[orgId] = subAccounts;
+                window.organizationAccounts = existingOrgAccounts;
+            }
+            
+            accountElement.innerHTML = `
+                <div class="icon">
+                    <div class="accountAvatar ${account.color}">${account.initials}</div>
+                </div>
+                <span class="nav-text">${account.name}</span>
+            `;
+            
+            // Add click handler
+            accountElement.addEventListener('click', function(e) {
+                e.stopPropagation();
+                
+                if (this.id === 'active-account') {
+                    return;
+                }
+                
+                const businessAccountElement = this.closest('.business-account');
+                if (businessAccountElement) {
+                    if (window.isInSandboxMode) {
+                        window.exitSandboxMode();
+                    }
+                    window.updateActiveBusinessAccount(businessAccountElement);
+                    return;
+                }
+            });
+            
+            // Insert before settings or at the end
+            if (settingsComponent) {
+                accountPanel.insertBefore(accountElement, settingsComponent);
+            } else {
+                accountPanel.appendChild(accountElement);
+            }
+        });
+        
+        // Update account visibility to include new accounts
+        this.updateAccountVisibility();
+        
+        console.log(`✅ Created ${accounts.length} business accounts: ${accounts.map(a => a.name).join(', ')}`);
+    }
+
+    openCreateAccountModal() {
+        const modal = document.getElementById('createAccountModal');
+        const businessNameInput = document.getElementById('businessName');
+        const subAccountCountInput = document.getElementById('subAccountCount');
+        
+        if (!modal) return;
+        
+        // Reset form
+        if (businessNameInput) businessNameInput.value = '';
+        if (subAccountCountInput) subAccountCountInput.value = '2';
+        
+        // Hide preview and disable confirm button
+        const previewSection = document.getElementById('previewSection');
+        const confirmButton = document.getElementById('confirmCreateAccount');
+        if (previewSection) previewSection.style.display = 'none';
+        if (confirmButton) confirmButton.disabled = true;
+        
+        modal.classList.add('show');
+        
+        // Focus on business name input
+        setTimeout(() => {
+            if (businessNameInput) businessNameInput.focus();
+        }, 200);
+    }
+
+    closeCreateAccountModal() {
+        const modal = document.getElementById('createAccountModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+    }
+
+    initCreateAccountModal() {
+        const modal = document.getElementById('createAccountModal');
+        const closeButton = document.getElementById('closeCreateAccountModal');
+        const cancelButton = document.getElementById('cancelCreateAccount');
+        const confirmButton = document.getElementById('confirmCreateAccount');
+        const businessNameInput = document.getElementById('businessName');
+        const subAccountCountInput = document.getElementById('subAccountCount');
+        
+        // Close handlers
+        if (closeButton) {
+            closeButton.addEventListener('click', () => {
+                this.closeCreateAccountModal();
+            });
+        }
+        
+        if (cancelButton) {
+            cancelButton.addEventListener('click', () => {
+                this.closeCreateAccountModal();
+            });
+        }
+        
+        // Click outside to close
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.closeCreateAccountModal();
+                }
+            });
+        }
+        
+        // Form input handlers
+        if (businessNameInput) {
+            businessNameInput.addEventListener('input', () => {
+                this.updateAccountPreview();
+            });
+        }
+        
+        if (subAccountCountInput) {
+            subAccountCountInput.addEventListener('input', () => {
+                this.updateAccountPreview();
+            });
+        }
+        
+        // Confirm button handler
+        if (confirmButton) {
+            confirmButton.addEventListener('click', () => {
+                const businessName = businessNameInput?.value?.trim() || '';
+                const subAccountCount = parseInt(subAccountCountInput?.value || 0);
+                
+                if (businessName.length > 0) {
+                    this.createBusinessAccounts(businessName, subAccountCount);
+                    this.closeCreateAccountModal();
+                }
+            });
+        }
+        
+        // Handle escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('show')) {
+                this.closeCreateAccountModal();
             }
         });
     }
