@@ -327,12 +327,11 @@
         /* Account Search Field */
         .account-search-container {
             position: sticky;
-            top: 0;
+            top: -8px;
             z-index: 10;
             background: #ffffff;
-            padding: 8px 12px 8px 12px;
-            margin-bottom: 0;
-            border-bottom: 1px solid #f0f0f0;
+            padding: 16px 12px 8px 12px;
+            margin: -8px -8px 0 -8px;
             border-radius: 8px 8px 0 0;
         }
 
@@ -360,6 +359,45 @@
         /* Account Items Container */
         .account-items-container {
             padding: 4px 0 0 0;
+        }
+
+        /* Subtle scrollbars for all popovers */
+        .account-popover-content,
+        .create-popover-content,
+        .sandbox-popover-content,
+        .account-items-container {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+        }
+
+        .account-popover-content::-webkit-scrollbar,
+        .create-popover-content::-webkit-scrollbar,
+        .sandbox-popover-content::-webkit-scrollbar,
+        .account-items-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .account-popover-content::-webkit-scrollbar-track,
+        .create-popover-content::-webkit-scrollbar-track,
+        .sandbox-popover-content::-webkit-scrollbar-track,
+        .account-items-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .account-popover-content::-webkit-scrollbar-thumb,
+        .create-popover-content::-webkit-scrollbar-thumb,
+        .sandbox-popover-content::-webkit-scrollbar-thumb,
+        .account-items-container::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.15);
+            border-radius: 3px;
+            transition: background-color 0.2s ease;
+        }
+
+        .account-popover-content::-webkit-scrollbar-thumb:hover,
+        .create-popover-content::-webkit-scrollbar-thumb:hover,
+        .sandbox-popover-content::-webkit-scrollbar-thumb:hover,
+        .account-items-container::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(0, 0, 0, 0.25);
         }
 
         /* Create Popover */
@@ -1547,7 +1585,7 @@
                     <span class="nav-text">Settings</span>
                 </div>
                     
-                    <div class="nav-component" id="sandboxTrigger" data-tooltip="Switch to sandbox">
+                    <div class="nav-component" id="sandboxTrigger">
                         <div class="icon">
                             <div class="genericIcon">
                                 <svg viewBox="0 0 16 16" width="16" height="16">
@@ -1574,7 +1612,7 @@
                         <span class="nav-text">Lil'Fatsos</span>
                     </div>
                     
-                    <div class="nav-component" id="createTrigger" data-tooltip="Create">
+                    <div class="nav-component" id="createTrigger">
                         <div class="icon">
                             <div class="genericIcon">
                                 <svg viewBox="0 0 16 16" width="16" height="16">
@@ -2077,21 +2115,24 @@
             
             popover.classList.remove('show');
             
-            // Reset all style properties to ensure clean state for next open
-            popover.style.visibility = '';
-            popover.style.left = '';
-            popover.style.top = '';
-            
-            if (popoverContent) {
-                popoverContent.style.maxHeight = '';
-                popoverContent.style.overflowY = '';
-            }
-            
-            // Remove popover-active class from account switcher
+            // Remove popover-active class from account switcher immediately
             const accountSwitcher = document.getElementById('accountSwitcher');
             if (accountSwitcher) {
                 accountSwitcher.classList.remove('popover-active');
             }
+            
+            // Delay style cleanup until after transition completes (250ms)
+            setTimeout(() => {
+                // Reset all style properties to ensure clean state for next open
+                popover.style.visibility = '';
+                popover.style.left = '';
+                popover.style.top = '';
+                
+                if (popoverContent) {
+                    popoverContent.style.maxHeight = '';
+                    popoverContent.style.overflowY = '';
+                }
+            }, 250);
         }
 
         function toggleAccountPopover(element) {
@@ -2580,7 +2621,7 @@
                 if (sandboxTriggerText) {
                     sandboxTriggerText.textContent = 'Switch sandbox';
                 }
-                sandboxTrigger.setAttribute('data-tooltip', 'Switch sandbox');
+
             }
             
             const accountSwitcher = document.getElementById('accountSwitcher');
@@ -2607,7 +2648,7 @@
                             </svg>
                         </div>
                     `;
-                    accountSwitcher.setAttribute('data-tooltip', 'Switch accounts');
+    
                     
                     // Update icon to show "All accounts" state
                     updateAccountSwitcherIcon();
@@ -2665,7 +2706,7 @@
                 if (sandboxTriggerText) {
                     sandboxTriggerText.textContent = 'Switch to sandbox';
                 }
-                sandboxTrigger.setAttribute('data-tooltip', 'Switch to sandbox');
+
             }
             
             // Restore original account switcher
