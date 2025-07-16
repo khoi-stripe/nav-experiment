@@ -1945,6 +1945,55 @@ document.addEventListener('DOMContentLoaded', () => {
         const stats = window.dashboard.getAccountStats(accountName);
         console.log(`Active account: ${accountName}`, stats);
     }
+
+    // Account panel click functionality for opened state
+    const accountPanel = document.getElementById('accountPanel');
+    if (accountPanel) {
+        let isAccountPanelOpened = false;
+        
+        accountPanel.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            // Only trigger on the account panel itself or its immediate children
+            // Don't trigger on individual nav components (they have their own click handlers)
+            const clickedNavComponent = e.target.closest('.nav-component');
+            if (clickedNavComponent && !clickedNavComponent.id.includes('Trigger')) {
+                return; // Let the nav component handle its own click
+            }
+            
+            // Toggle opened state
+            isAccountPanelOpened = !isAccountPanelOpened;
+            
+            if (isAccountPanelOpened) {
+                accountPanel.classList.add('opened');
+            } else {
+                accountPanel.classList.remove('opened');
+            }
+        });
+        
+        // Click away to close account panel
+        document.addEventListener('click', (e) => {
+            if (isAccountPanelOpened && !accountPanel.contains(e.target)) {
+                isAccountPanelOpened = false;
+                accountPanel.classList.remove('opened');
+            }
+        });
+        
+        // Close account panel when clicking on nav panel or main content
+        const navPanel = document.getElementById('navPanel');
+        const mainContent = document.querySelector('.main-content');
+        
+        [navPanel, mainContent].forEach(element => {
+            if (element) {
+                element.addEventListener('click', (e) => {
+                    if (isAccountPanelOpened) {
+                        isAccountPanelOpened = false;
+                        accountPanel.classList.remove('opened');
+                    }
+                });
+            }
+        });
+    }
 });
 
 // Optimized demo function to update main content

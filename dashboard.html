@@ -37,6 +37,37 @@
             flex-direction: column;
             border-right: 1px solid #e0e0e0;
             box-sizing: border-box;
+            will-change: width;
+        }
+
+        /* Optimized nav panel transitions */
+        .nav-panel {
+            transform-origin: left center;
+            transition: width 0.2s cubic-bezier(0.165, 0.84, 0.44, 1), margin-top 0.2s cubic-bezier(0.165, 0.84, 0.44, 1), height 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+            will-change: width;
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
+        
+        /* Account Panel Specific Styling */
+        .account-panel {
+            width: 20px;
+            padding: 12px 4px;
+            border-right: none;
+            cursor: pointer;
+            transition: width 0.5s cubic-bezier(0.165, 0.84, 0.44, 1), padding 0.5s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.5s cubic-bezier(0.165, 0.84, 0.44, 1), border-right 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+            transition-delay: 0.3s;
+            box-shadow: 12px 0 40px 4px rgba(0, 0, 0, 0.18), 6px 0 16px rgba(0, 0, 0, 0.12);
+        }
+        
+        .account-panel:hover {
+            width: 48px;
+            padding: 12px;
+            background: #F5F6F8;
+            border-right: 1px solid #e0e0e0;
+            box-shadow: 6px 0 16px rgba(0, 0, 0, 0.12), 2px 0 6px rgba(0, 0, 0, 0.08);
+            transition: width 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), padding 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), border-right 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition-delay: 0s;
         }
 
         .nav-panel {
@@ -48,7 +79,7 @@
         }
 
         .account-panel {
-            background: #F5F6F8;
+            background: #D8DEE4;
             box-shadow: inset -6px 0 6px -6px rgba(0, 0, 0, 0.08);
         }
 
@@ -67,24 +98,32 @@
         /* Expand Button Container */
         .expandButton-container {
             position: fixed;
-            left: 114px; /* 49px (account panel) + 49px (nav panel) + 16px offset */
+            left: 65px; /* 20px (account panel) + 49px (nav panel) - 4px gap */
             top: 50%;
             transform: translateY(-50%);
             width: 24px; /* Increased for better click area */
             height: 32px; /* 16px button + 8px padding on top and bottom */
             z-index: 1002;
-            transition: left 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+            transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            background: rgba(255, 255, 255, 0.8);
             border-radius: 4px;
-            backdrop-filter: blur(10px);
+        }
+        
+        /* Update expand button position when account panel is hovered */
+        .account-panel:hover ~ .nav-panel ~ .expandButton-container {
+            left: 93px; /* 48px (hovered account panel) + 49px (nav panel) - 4px gap */
+        }
+        
+        /* Update expand button position when account panel is opened */
+        .account-panel.opened ~ .nav-panel ~ .expandButton-container {
+            left: 265px; /* 220px (opened account panel) + 49px (nav panel) - 4px gap */
         }
 
         .expandButton-container:hover {
-            background: rgba(255, 255, 255, 0.95);
+            /* No background on hover */
         }
 
         /* Expand Button */
@@ -556,14 +595,25 @@
         }
 
         .nav-panel.expanded ~ .expandButton-container {
-            left: 269px; /* 49px (account panel) + 220px (expanded nav panel) + 8px offset - 8px container padding */
+            left: 236px; /* 20px (account panel) + 220px (expanded nav panel) - 4px gap */
         }
 
-        .account-panel.expanded ~ .nav-panel ~ .expandButton-container {
-            left: 269px; /* 220px (expanded account panel) + 49px (nav panel) + 8px offset - 8px container padding */
+        /* When account panel is hovered AND nav panel is expanded */
+        .account-panel:hover ~ .nav-panel.expanded ~ .expandButton-container {
+            left: 264px; /* 48px (hovered account panel) + 220px (expanded nav panel) - 4px gap */
         }
 
-        .nav-panel.expanded, .account-panel.expanded {
+        /* When both account panel is opened AND nav panel is expanded */
+        .account-panel.opened ~ .nav-panel.expanded ~ .expandButton-container {
+            left: 436px; /* 220px (opened account panel) + 220px (expanded nav panel) - 4px gap */
+        }
+
+        /* Ensure opened state positioning takes priority over hover when nav panel is expanded */
+        .account-panel.opened:hover ~ .nav-panel.expanded ~ .expandButton-container {
+            left: 436px; /* Same as opened+expanded state */
+        }
+
+        .nav-panel.expanded {
             width: 220px;
         }
 
@@ -624,6 +674,75 @@
         .account-panel .nav-component:hover::before,
         .account-panel .nav-component.popover-active::before {
             background-color: #e9ecef;
+        }
+
+        /* Complete page isolation during nav panel transition */
+        body.nav-transitioning {
+            pointer-events: none !important;
+            user-select: none !important;
+        }
+
+        body.nav-transitioning * {
+            pointer-events: none !important;
+            user-select: none !important;
+        }
+
+        /* Force hardware acceleration */
+        .nav-panel.transitioning {
+            will-change: width;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
+
+        /* Disable interactions when account panel is collapsed */
+        .account-panel:not(:hover):not(.opened) .nav-component {
+            pointer-events: none;
+            cursor: default;
+        }
+
+        .account-panel:not(:hover):not(.opened) .nav-component:hover::before,
+        .account-panel:not(:hover):not(.opened) .nav-component.popover-active::before {
+            display: none;
+        }
+
+        /* Delay re-enabling interactions after hover transition */
+        .account-panel:hover .nav-component {
+            pointer-events: none;
+            cursor: default;
+            animation: enable-interactions 0.1s ease forwards;
+            animation-delay: 0.35s;
+        }
+
+        .account-panel:hover .nav-component:hover::before,
+        .account-panel:hover .nav-component.popover-active::before {
+            display: none;
+            animation: enable-hover-effects 0.1s ease forwards;
+            animation-delay: 0.35s;
+        }
+
+        .account-panel.opened .nav-component {
+            pointer-events: auto;
+            cursor: pointer;
+            animation: none;
+        }
+
+        .account-panel.opened .nav-component:hover::before,
+        .account-panel.opened .nav-component.popover-active::before {
+            display: block;
+            animation: none;
+        }
+
+        @keyframes enable-interactions {
+            to {
+                pointer-events: auto;
+                cursor: pointer;
+            }
+        }
+
+        @keyframes enable-hover-effects {
+            to {
+                display: block;
+            }
         }
 
         /* Active State - Only for nav-panel items */
@@ -818,9 +937,40 @@
             transition: opacity 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
-        .nav-panel.expanded .nav-component .nav-text, 
-        .account-panel.expanded .nav-component .nav-text {
+        .nav-panel.expanded .nav-component .nav-text {
             opacity: 1;
+        }
+        
+        /* Account panel text is always hidden */
+        .account-panel .nav-component .nav-text {
+            opacity: 0;
+        }
+        
+        /* Account panel opened state - show text labels */
+        .account-panel.opened {
+            width: 220px !important;
+            padding: 12px 20px !important;
+            background: #F5F6F8 !important;
+            border-right: 1px solid #e0e0e0 !important;
+            box-shadow: 6px 0 16px rgba(0, 0, 0, 0.12), 2px 0 6px rgba(0, 0, 0, 0.08) !important;
+        }
+        
+        .account-panel.opened .nav-component .nav-text {
+            opacity: 1;
+        }
+        
+        /* Prevent hover effects when panel is opened */
+        .account-panel.opened:hover {
+            width: 220px;
+            padding: 12px 20px;
+            background: #F5F6F8;
+            border-right: 1px solid #e0e0e0;
+            box-shadow: 6px 0 16px rgba(0, 0, 0, 0.12), 2px 0 6px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* Ensure opened state positioning takes priority over hover */
+        .account-panel.opened:hover ~ .nav-panel ~ .expandButton-container {
+            left: 265px; /* Same as opened state - 220px (opened account panel) + 49px (nav panel) - 4px gap */
         }
 
         /* Account switcher text truncation */
@@ -845,8 +995,8 @@
         .sandbox-indicator-bar {
             position: fixed;
             top: 0;
-            left: 49px;  /* Start after collapsed account panel, extend over nav panel */
-            width: calc(100% - 49px);  /* Extend over nav panel and main content */
+            left: 20px;  /* Start after collapsed account panel, extend over nav panel */
+            width: calc(100% - 20px);  /* Extend over nav panel and main content */
             height: 32px;
             background-color: #0E3359;
             color: white;
@@ -857,14 +1007,20 @@
             font-weight: 600;
             z-index: 9999;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: left 0.2s cubic-bezier(0.23, 1, 0.32, 1), width 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+            transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1), width 0.4s cubic-bezier(0.25, 1, 0.5, 1);
             padding: 0 16px;
             box-sizing: border-box;
         }
 
-        /* Adjust bar position when account panel is expanded */
-        .dashboard.sandbox-mode.account-panel-expanded .sandbox-indicator-bar {
-            left: 220px;  /* Start after expanded account panel, extend over nav panel and main content */
+        /* Adjust bar position when account panel is hovered */
+        .account-panel:hover ~ .dashboard.sandbox-mode .sandbox-indicator-bar {
+            left: 48px;  /* Start after hovered account panel, extend over nav panel and main content */
+            width: calc(100% - 48px);  /* Extend over nav panel and main content */
+        }
+        
+        /* Adjust bar position when account panel is opened */
+        .account-panel.opened ~ .dashboard.sandbox-mode .sandbox-indicator-bar {
+            left: 220px;  /* Start after opened account panel, extend over nav panel and main content */
             width: calc(100% - 220px);  /* Extend over nav panel and main content */
         }
 
@@ -1081,8 +1237,9 @@
 
             .account-panel {
                 position: fixed;
-                left: -120px;
+                left: -48px;
                 z-index: 999;
+                width: 48px;
             }
 
             .nav-panel.mobile-open {
@@ -2278,12 +2435,7 @@
                     previousNavPanelState = false;
                 }
                 
-                // Update dashboard class for sandbox bar positioning
-                if (accountPanel.classList.contains('mobile-open')) {
-                    dashboard.classList.add('account-panel-expanded');
-                } else {
-                    dashboard.classList.remove('account-panel-expanded');
-                }
+                // Sandbox bar positioning handled by CSS
                 
                 // Sandbox bar positioning handled by CSS classes
             } else {
@@ -2305,12 +2457,7 @@
                     previousNavPanelState = false;
                 }
                 
-                // Update dashboard class for sandbox bar positioning
-                if (accountPanel.classList.contains('expanded')) {
-                    dashboard.classList.add('account-panel-expanded');
-                } else {
-                    dashboard.classList.remove('account-panel-expanded');
-                }
+                // Sandbox bar positioning handled by CSS
                 
                 // Sandbox bar positioning handled by CSS classes
             }
@@ -2342,18 +2489,35 @@
             if (window.innerWidth <= 768) {
                 // Close accountPanel if it's open
                 accountPanel.classList.remove('mobile-open');
+                document.body.classList.add('nav-transitioning');
+                navPanel.classList.add('transitioning');
                 navPanel.classList.toggle('mobile-open');
+                setTimeout(() => {
+                    navPanel.classList.remove('transitioning');
+                    document.body.classList.remove('nav-transitioning');
+                }, 220);
             } else {
                 if (navPanel.classList.contains('expanded')) {
                     // Close navPanel
+                    document.body.classList.add('nav-transitioning');
+                    navPanel.classList.add('transitioning');
                     navPanel.classList.remove('expanded');
                     dashboard.classList.remove('nav-panel-expanded');
+                    setTimeout(() => {
+                        navPanel.classList.remove('transitioning');
+                        document.body.classList.remove('nav-transitioning');
+                    }, 220);
             } else {
                 // Close accountPanel if it's open
                 accountPanel.classList.remove('expanded');
-                    dashboard.classList.remove('account-panel-expanded');
+                document.body.classList.add('nav-transitioning');
+                navPanel.classList.add('transitioning');
                 navPanel.classList.toggle('expanded');
                     dashboard.classList.add('nav-panel-expanded');
+                    setTimeout(() => {
+                        navPanel.classList.remove('transitioning');
+                        document.body.classList.remove('nav-transitioning');
+                    }, 220);
                 }
             }
             
@@ -2417,7 +2581,6 @@
             if (window.innerWidth <= 768) {
                 if (accountPanel.classList.contains('mobile-open')) {
                     accountPanel.classList.remove('mobile-open');
-                    dashboard.classList.remove('account-panel-expanded');
                     
                     // If nav panel was previously open, restore it
                     if (previousNavPanelState) {
@@ -2432,7 +2595,6 @@
             } else {
                 if (accountPanel.classList.contains('expanded')) {
                     accountPanel.classList.remove('expanded');
-                    dashboard.classList.remove('account-panel-expanded');
                     
                     // If nav panel was previously expanded, restore it
                     if (previousNavPanelState) {
