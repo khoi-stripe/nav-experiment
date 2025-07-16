@@ -1042,6 +1042,211 @@
             .expandButton-container {
                 display: none;
             }
+
+            .account-visibility-button {
+                bottom: 20px !important;
+                right: 20px !important;
+            }
+        }
+
+        /* Account Visibility Floating Button */
+        .account-visibility-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 48px;
+            height: 48px;
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+            z-index: 1001;
+        }
+
+        .account-visibility-button:hover {
+            background: #f8f9fa;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .account-visibility-button svg {
+            fill: #596171;
+            transition: fill 0.2s ease;
+        }
+
+        .account-visibility-button:hover svg {
+            fill: #333;
+        }
+
+        /* Account Visibility Modal */
+        .account-visibility-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1002;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .account-visibility-modal.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .account-visibility-content {
+            background: #ffffff;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 480px;
+            max-height: 80vh;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.2s ease;
+        }
+
+        .account-visibility-modal.show .account-visibility-content {
+            transform: scale(1);
+        }
+
+        .account-visibility-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px 16px 24px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .account-visibility-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .close-button:hover {
+            background: #f5f5f5;
+        }
+
+        .close-button svg {
+            fill: #596171;
+        }
+
+        .account-visibility-body {
+            padding: 20px 24px 24px 24px;
+        }
+
+        .account-visibility-description {
+            margin: 0 0 16px 0;
+            color: #596171;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .account-visibility-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 8px;
+        }
+
+        .account-visibility-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 6px;
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+
+        .account-visibility-item:hover {
+            background: #f8f9fa;
+        }
+
+        .account-visibility-item input[type="checkbox"] {
+            margin-right: 12px;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .account-visibility-item .account-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .account-visibility-item .accountAvatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            margin-right: 12px;
+        }
+
+        .account-visibility-item .account-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .account-visibility-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            color: #596171;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            border-color: #ced4da;
+            color: #495057;
+        }
+
+        /* Hidden account styling */
+        .nav-component.account-hidden {
+            display: none !important;
         }
     </style>
 </head>
@@ -3196,6 +3401,39 @@
         });
     </script>
     
+    <!-- Floating Account Visibility Button -->
+    <div class="account-visibility-button" id="accountVisibilityButton" data-tooltip="Manage account visibility">
+        <svg viewBox="0 0 16 16" width="16" height="16">
+            <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>
+            <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM1.5 8a6.5 6.5 0 1113 0 6.5 6.5 0 01-13 0z"/>
+            <path d="M4.5 7c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5S4.5 7.83 4.5 7zm4.5 0c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5S9 7.83 9 7z"/>
+        </svg>
+    </div>
+
+    <!-- Account Visibility Menu Modal -->
+    <div class="account-visibility-modal" id="accountVisibilityModal">
+        <div class="account-visibility-content">
+            <div class="account-visibility-header">
+                <h3>Manage Account Visibility</h3>
+                <button class="close-button" id="closeAccountVisibilityModal">
+                    <svg viewBox="0 0 16 16" width="16" height="16">
+                        <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="account-visibility-body">
+                <p class="account-visibility-description">Select which accounts should be visible in the account panel:</p>
+                <div class="account-visibility-list" id="accountVisibilityList">
+                    <!-- Account checkboxes will be populated here -->
+                </div>
+                <div class="account-visibility-actions">
+                    <button class="btn-secondary" id="showAllAccounts">Show All</button>
+                    <button class="btn-secondary" id="hideAllAccounts">Hide All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Load the updated dashboard.js -->
     <script src="dashboard.js"></script>
 </body>

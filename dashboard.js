@@ -118,6 +118,9 @@ class Dashboard {
             }, 100);
         }
         
+        // Initialize account visibility functionality
+        this.initAccountVisibility();
+        
         // Expose debugging functions globally
         window.debugSandboxes = () => this.debugSandboxStorage();
         window.clearSandboxes = () => this.clearAllSandboxData();
@@ -1103,6 +1106,186 @@ class Dashboard {
         //         text.style.opacity = '0';
         //     });
         // }
+    }
+
+    // Account Visibility Management
+    loadHiddenAccounts() {
+        try {
+            const hiddenAccounts = localStorage.getItem('hiddenAccounts');
+            return hiddenAccounts ? JSON.parse(hiddenAccounts) : [];
+        } catch (error) {
+            console.error('Error loading hidden accounts:', error);
+            return [];
+        }
+    }
+
+    saveHiddenAccounts(hiddenAccounts) {
+        try {
+            localStorage.setItem('hiddenAccounts', JSON.stringify(hiddenAccounts));
+        } catch (error) {
+            console.error('Error saving hidden accounts:', error);
+        }
+    }
+
+    getAllAccounts() {
+        const accounts = [];
+        const accountElements = document.querySelectorAll('.account-panel .business-account');
+        
+        accountElements.forEach(element => {
+            const accountName = element.dataset.accountName;
+            const accountInitials = element.dataset.accountInitials;
+            const accountColor = element.dataset.accountColor;
+            
+            if (accountName && accountInitials && accountColor) {
+                accounts.push({
+                    name: accountName,
+                    initials: accountInitials,
+                    color: accountColor,
+                    element: element
+                });
+            }
+        });
+        
+        return accounts;
+    }
+
+    hideAccount(accountName) {
+        const hiddenAccounts = this.loadHiddenAccounts();
+        if (!hiddenAccounts.includes(accountName)) {
+            hiddenAccounts.push(accountName);
+            this.saveHiddenAccounts(hiddenAccounts);
+            this.updateAccountVisibility();
+        }
+    }
+
+    showAccount(accountName) {
+        let hiddenAccounts = this.loadHiddenAccounts();
+        hiddenAccounts = hiddenAccounts.filter(name => name !== accountName);
+        this.saveHiddenAccounts(hiddenAccounts);
+        this.updateAccountVisibility();
+    }
+
+    updateAccountVisibility() {
+        const hiddenAccounts = this.loadHiddenAccounts();
+        const allAccounts = this.getAllAccounts();
+        
+        allAccounts.forEach(account => {
+            const isHidden = hiddenAccounts.includes(account.name);
+            if (isHidden) {
+                account.element.classList.add('account-hidden');
+            } else {
+                account.element.classList.remove('account-hidden');
+            }
+        });
+    }
+
+    populateAccountVisibilityModal() {
+        const accountList = document.getElementById('accountVisibilityList');
+        const hiddenAccounts = this.loadHiddenAccounts();
+        const allAccounts = this.getAllAccounts();
+        
+        if (!accountList) return;
+        
+        accountList.innerHTML = '';
+        
+        allAccounts.forEach(account => {
+            const isVisible = !hiddenAccounts.includes(account.name);
+            
+            const accountItem = document.createElement('div');
+            accountItem.className = 'account-visibility-item';
+            accountItem.innerHTML = `
+                <input type="checkbox" ${isVisible ? 'checked' : ''} data-account-name="${account.name}">
+                <div class="account-info">
+                    <div class="accountAvatar ${account.color}">${account.initials}</div>
+                    <span class="account-name">${account.name}</span>
+                </div>
+            `;
+            
+            const checkbox = accountItem.querySelector('input[type="checkbox"]');
+            checkbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this.showAccount(account.name);
+                } else {
+                    this.hideAccount(account.name);
+                }
+            });
+            
+            // Allow clicking on the item to toggle checkbox
+            accountItem.addEventListener('click', (e) => {
+                if (e.target.type !== 'checkbox') {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+            
+            accountList.appendChild(accountItem);
+        });
+    }
+
+    showAllAccounts() {
+        this.saveHiddenAccounts([]);
+        this.updateAccountVisibility();
+        this.populateAccountVisibilityModal();
+    }
+
+    hideAllAccounts() {
+        const allAccounts = this.getAllAccounts();
+        const allAccountNames = allAccounts.map(account => account.name);
+        this.saveHiddenAccounts(allAccountNames);
+        this.updateAccountVisibility();
+        this.populateAccountVisibilityModal();
+    }
+
+    initAccountVisibility() {
+        // Apply hidden account styles on load
+        this.updateAccountVisibility();
+        
+        // Set up event handlers
+        const visibilityButton = document.getElementById('accountVisibilityButton');
+        const visibilityModal = document.getElementById('accountVisibilityModal');
+        const closeButton = document.getElementById('closeAccountVisibilityModal');
+        const showAllButton = document.getElementById('showAllAccounts');
+        const hideAllButton = document.getElementById('hideAllAccounts');
+        
+        if (visibilityButton) {
+            visibilityButton.addEventListener('click', () => {
+                this.populateAccountVisibilityModal();
+                visibilityModal.classList.add('show');
+            });
+        }
+        
+        if (closeButton) {
+            closeButton.addEventListener('click', () => {
+                visibilityModal.classList.remove('show');
+            });
+        }
+        
+        if (visibilityModal) {
+            visibilityModal.addEventListener('click', (e) => {
+                if (e.target === visibilityModal) {
+                    visibilityModal.classList.remove('show');
+                }
+            });
+        }
+        
+        if (showAllButton) {
+            showAllButton.addEventListener('click', () => {
+                this.showAllAccounts();
+            });
+        }
+        
+        if (hideAllButton) {
+            hideAllButton.addEventListener('click', () => {
+                this.hideAllAccounts();
+            });
+        }
+        
+        // Handle escape key to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && visibilityModal.classList.contains('show')) {
+                visibilityModal.classList.remove('show');
+            }
+        });
     }
 }
 
