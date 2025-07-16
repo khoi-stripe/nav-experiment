@@ -1555,8 +1555,18 @@ class Dashboard {
         // Update account visibility to include new account
         this.updateAccountVisibility();
         
+        // Automatically switch to the newly created account to show sub-accounts
         if (subAccountCount > 0) {
             console.log(`✅ Created organization account: ${mainAccount.name} (${subAccountCount} sub-accounts accessible via account switcher)`);
+            console.log(`🔄 Automatically switching to new organization account...`);
+            
+            // Switch to the new organization account
+            setTimeout(() => {
+                if (window.updateActiveBusinessAccount) {
+                    window.updateActiveBusinessAccount(accountElement);
+                    console.log(`🔄 Switched to organization account, account switcher should now be visible`);
+                }
+            }, 100);
         } else {
             console.log(`✅ Created standalone business account: ${mainAccount.name}`);
         }
