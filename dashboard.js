@@ -1483,6 +1483,14 @@ class Dashboard {
             const orgId = mainAccount.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
             accountElement.setAttribute('data-organization', orgId);
             
+            console.log(`🏢 Creating organization account with ID: "${orgId}" for "${mainAccount.name}"`);
+            console.log(`🏢 Organization element classes:`, accountElement.className);
+            console.log(`🏢 Organization data attributes:`, {
+                name: accountElement.getAttribute('data-account-name'),
+                organization: accountElement.getAttribute('data-organization'),
+                color: accountElement.getAttribute('data-account-color')
+            });
+            
             // Store sub-accounts in organization accounts structure
             const subAccounts = accounts.slice(1).map(subAccount => ({
                 name: subAccount.name,
@@ -1490,12 +1498,18 @@ class Dashboard {
                 color: subAccount.color
             }));
             
-            // Get existing organization accounts or create new structure
-            const existingOrgAccounts = window.organizationAccounts || {};
-            existingOrgAccounts[orgId] = subAccounts;
-            window.organizationAccounts = existingOrgAccounts;
+            // Update the global organizationAccounts object
+            if (typeof organizationAccounts !== 'undefined') {
+                organizationAccounts[orgId] = subAccounts;
+            } else {
+                // Fallback: create global organizationAccounts if it doesn't exist
+                window.organizationAccounts = window.organizationAccounts || {};
+                window.organizationAccounts[orgId] = subAccounts;
+            }
             
             console.log(`✅ Created organization "${mainAccount.name}" with ${subAccounts.length} sub-accounts:`, subAccounts.map(a => a.name).join(', '));
+            console.log('📋 Organization data added to organizationAccounts:', orgId, subAccounts);
+            console.log('📋 Current organizationAccounts structure:', typeof organizationAccounts !== 'undefined' ? organizationAccounts : window.organizationAccounts);
         }
         
         accountElement.innerHTML = `
