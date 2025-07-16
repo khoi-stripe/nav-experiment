@@ -580,6 +580,8 @@ class Dashboard {
             const dividerContainer = popoverContentElement.querySelector('.sandbox-popover-divider-container');
                 if (dividerContainer) {
                 popoverContentElement.insertBefore(popoverFragment, dividerContainer);
+                // Show/hide divider based on whether there are any sandboxes
+                dividerContainer.style.display = sandboxesToShow.length > 0 ? 'block' : 'none';
                 } else {
                 popoverContentElement.appendChild(popoverFragment);
                 }
