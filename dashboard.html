@@ -724,6 +724,18 @@
             display: none;
         }
 
+        /* EXCEPTION: Always allow hover for createTrigger and sandboxTrigger */
+        .account-panel:not(.hovered):not(.opened) #createTrigger,
+        .account-panel:not(.hovered):not(.opened) #sandboxTrigger {
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .account-panel:not(.hovered):not(.opened) #createTrigger:hover::before,
+        .account-panel:not(.hovered):not(.opened) #sandboxTrigger:hover::before {
+            display: block;
+        }
+
         /* Delay re-enabling interactions after hover transition */
         .account-panel.hovered .nav-component {
             pointer-events: none;
@@ -737,6 +749,20 @@
             display: none;
             animation: enable-hover-effects 0.1s ease forwards;
             animation-delay: 0.25s;
+        }
+
+        /* EXCEPTION: createTrigger and sandboxTrigger are immediately interactive */
+        .account-panel.hovered #createTrigger,
+        .account-panel.hovered #sandboxTrigger {
+            pointer-events: auto;
+            cursor: pointer;
+            animation: none;
+        }
+
+        .account-panel.hovered #createTrigger:hover::before,
+        .account-panel.hovered #sandboxTrigger:hover::before {
+            display: block;
+            animation: none;
         }
 
         .account-panel.opened .nav-component {
@@ -2513,8 +2539,72 @@
             }
         }
 
-        // Track previous nav panel state for restoration
-        let previousNavPanelState = false;
+        // Enhanced nav panel state management
+        let previousNavPanelState = false; // Temporary state for immediate restoration
+        
+        // Persistent nav panel state management
+        const NAV_PANEL_STATE_KEY = 'navPanelPreferredState';
+        
+        function getNavPanelPreferredState() {
+            const saved = localStorage.getItem(NAV_PANEL_STATE_KEY);
+            return saved === 'true'; // Default to false (collapsed) if not set
+        }
+        
+        function hasNavPanelPreference() {
+            return localStorage.getItem(NAV_PANEL_STATE_KEY) !== null;
+        }
+        
+        function setNavPanelPreferredState(isExpanded) {
+            localStorage.setItem(NAV_PANEL_STATE_KEY, isExpanded.toString());
+            debugLog('NavState', `💾 Saved nav panel preferred state: ${isExpanded ? 'expanded' : 'collapsed'}`);
+        }
+        
+        function restoreNavPanelPreferredState() {
+            const navPanel = document.getElementById('navPanel');
+            const accountPanel = document.getElementById('accountPanel');
+            const dashboard = document.querySelector('.dashboard');
+            const expandButton = document.querySelector('.expandButton-container');
+            
+            if (!navPanel || !accountPanel) return;
+            
+            // Only apply restoration if user has an explicit preference
+            const hasPreference = hasNavPanelPreference();
+            if (!hasPreference) {
+                debugLog('NavState', '🔄 No nav panel preference saved - leaving natural state');
+                return;
+            }
+            
+            const preferredExpanded = getNavPanelPreferredState();
+            const accountPanelOpen = accountPanel.classList.contains('opened') || accountPanel.classList.contains('mobile-open');
+            
+            // Only restore if account panel is not open (mutual exclusivity)
+            if (!accountPanelOpen && preferredExpanded) {
+                debugLog('NavState', '🔄 Restoring nav panel to preferred expanded state');
+                
+                if (window.innerWidth <= 768) {
+                    navPanel.classList.add('mobile-open');
+                    dashboard.classList.add('nav-panel-expanded');
+                } else {
+                    navPanel.classList.add('expanded');
+                    dashboard.classList.add('nav-panel-expanded');
+                }
+                
+                if (expandButton) {
+                    expandButton.setAttribute('data-tooltip', 'Collapse');
+                }
+                updateNavPanelStatus();
+            } else if (!accountPanelOpen && !preferredExpanded) {
+                debugLog('NavState', '🔄 Restoring nav panel to preferred collapsed state');
+                // Ensure collapsed state
+                navPanel.classList.remove('expanded', 'mobile-open');
+                dashboard.classList.remove('nav-panel-expanded');
+                
+                if (expandButton) {
+                    expandButton.setAttribute('data-tooltip', 'Expand');
+                }
+                updateNavPanelStatus();
+            }
+        }
         
         function toggleAccountPanel() {
             const accountPanel = document.getElementById('accountPanel');
@@ -2535,53 +2625,59 @@
             }
             
             if (window.innerWidth <= 768) {
-                // Save nav panel state before closing if we're opening account panel
-                if (!accountPanel.classList.contains('mobile-open') && navPanel.classList.contains('mobile-open')) {
-                    previousNavPanelState = true;
+                // MOBILE: Ensure mutual exclusivity - only one panel open at a time
+                if (accountPanel.classList.contains('mobile-open')) {
+                    // Closing account panel - restore nav panel to preferred state or temporary state
+                    accountPanel.classList.remove('mobile-open');
+                    
+                    // Restore immediate previous state first, then fall back to preferred state
+                    if (previousNavPanelState) {
+                        navPanel.classList.add('mobile-open');
+                        dashboard.classList.add('nav-panel-expanded');
+                        expandButton.setAttribute('data-tooltip', 'Collapse');
+                        previousNavPanelState = false;
+                        debugLog('NavState', '🔄 Restored nav panel from immediate previous state (mobile)');
+                    } else {
+                        // Restore to user's preferred state
+                        setTimeout(() => restoreNavPanelPreferredState(), 10);
+                    }
+                } else {
+                    // Opening account panel - close nav panel first and save its state
+                    if (navPanel.classList.contains('mobile-open')) {
+                        previousNavPanelState = true;
+                        navPanel.classList.remove('mobile-open');
+                        dashboard.classList.remove('nav-panel-expanded');
+                    }
+                    accountPanel.classList.add('mobile-open');
+                    expandButton.setAttribute('data-tooltip', 'Expand');
                 }
-                
-                // Close navPanel if it's open
-                navPanel.classList.remove('mobile-open');
-                accountPanel.classList.toggle('mobile-open');
-                
-                // If closing account panel and nav panel was previously open, restore it
-                if (!accountPanel.classList.contains('mobile-open') && previousNavPanelState) {
-                    navPanel.classList.add('mobile-open');
-                    dashboard.classList.add('nav-panel-expanded');
-                    expandButton.setAttribute('data-tooltip', 'Collapse');
-                    previousNavPanelState = false;
-                }
-                
-                // Sandbox bar positioning handled by CSS
-                
-                // Sandbox bar positioning handled by CSS classes
             } else {
-                // Save nav panel state before closing if we're opening account panel
-                if (!accountPanel.classList.contains('expanded') && navPanel.classList.contains('expanded')) {
-                    previousNavPanelState = true;
+                // DESKTOP: Ensure mutual exclusivity - only one panel open at a time
+                if (accountPanel.classList.contains('opened')) {
+                    // Closing account panel - restore nav panel to preferred state or temporary state
+                    accountPanel.classList.remove('opened');
+                    
+                    // Restore immediate previous state first, then fall back to preferred state
+                    if (previousNavPanelState) {
+                        navPanel.classList.add('expanded');
+                        dashboard.classList.add('nav-panel-expanded');
+                        expandButton.setAttribute('data-tooltip', 'Collapse');
+                        previousNavPanelState = false;
+                        debugLog('NavState', '🔄 Restored nav panel from immediate previous state (desktop)');
+                    } else {
+                        // Restore to user's preferred state
+                        setTimeout(() => restoreNavPanelPreferredState(), 10);
+                    }
+                } else {
+                    // Opening account panel - close nav panel first and save its state
+                    if (navPanel.classList.contains('expanded')) {
+                        previousNavPanelState = true;
+                        navPanel.classList.remove('expanded');
+                        dashboard.classList.remove('nav-panel-expanded');
+                    }
+                    accountPanel.classList.add('opened');
+                    expandButton.setAttribute('data-tooltip', 'Expand');
                 }
-                
-                // Close navPanel if it's open
-                navPanel.classList.remove('expanded');
-                dashboard.classList.remove('nav-panel-expanded');
-                accountPanel.classList.toggle('expanded');
-                
-                // If closing account panel and nav panel was previously expanded, restore it
-                if (!accountPanel.classList.contains('expanded') && previousNavPanelState) {
-                    navPanel.classList.add('expanded');
-                    dashboard.classList.add('nav-panel-expanded');
-                    expandButton.setAttribute('data-tooltip', 'Collapse');
-                    previousNavPanelState = false;
-                }
-                
-                // Sandbox bar positioning handled by CSS
-                
-                // Sandbox bar positioning handled by CSS classes
-            }
-            
-            // Update expand button tooltip text since navPanel is now closed (if not restored)
-            if (!previousNavPanelState) {
-                expandButton.setAttribute('data-tooltip', 'Expand');
             }
             
             // Update status indicator
@@ -2608,34 +2704,55 @@
             // Reset restoration state when nav panel is manually toggled
             previousNavPanelState = false;
             
+            let willBeExpanded = false;
+            
             if (window.innerWidth <= 768) {
-                // Close accountPanel if it's open
-                accountPanel.classList.remove('mobile-open');
-                navPanel.classList.toggle('mobile-open');
+                // MOBILE: Ensure mutual exclusivity - only one panel open at a time
+                if (navPanel.classList.contains('mobile-open')) {
+                    // Closing nav panel
+                    navPanel.classList.remove('mobile-open');
+                    dashboard.classList.remove('nav-panel-expanded');
+                    expandButton.setAttribute('data-tooltip', 'Expand');
+                    willBeExpanded = false;
+                } else {
+                    // Opening nav panel - close account panel first
+                    accountPanel.classList.remove('mobile-open');
+                    accountPanel.classList.remove('opened'); // Clean up hover state too
+                    navPanel.classList.add('mobile-open');
+                    dashboard.classList.add('nav-panel-expanded');
+                    expandButton.setAttribute('data-tooltip', 'Collapse');
+                    willBeExpanded = true;
+                }
             } else {
+                // DESKTOP: Ensure mutual exclusivity - only one panel open at a time
                 if (navPanel.classList.contains('expanded')) {
-                    // Close navPanel
+                    // Closing nav panel
                     navPanel.classList.remove('expanded');
                     dashboard.classList.remove('nav-panel-expanded');
-            } else {
-                // Close accountPanel if it's open
-                accountPanel.classList.remove('expanded');
-                navPanel.classList.toggle('expanded');
+                    expandButton.setAttribute('data-tooltip', 'Expand');
+                    willBeExpanded = false;
+                } else {
+                    // Opening nav panel - close account panel first
+                    accountPanel.classList.remove('opened');
+                    accountPanel.classList.remove('hovered'); // Clean up hover state too
+                    navPanel.classList.add('expanded');
                     dashboard.classList.add('nav-panel-expanded');
+                    expandButton.setAttribute('data-tooltip', 'Collapse');
+                    willBeExpanded = true;
                 }
             }
             
-            // Update expand button tooltip text
-            if (navPanel.classList.contains('expanded') || navPanel.classList.contains('mobile-open')) {
-                expandButton.setAttribute('data-tooltip', 'Collapse');
-            } else {
-                expandButton.setAttribute('data-tooltip', 'Expand');
-            }
+            // SAVE USER PREFERENCE: Remember this choice for future restoration
+            setNavPanelPreferredState(willBeExpanded);
+            debugLog('NavState', `👤 User manually ${willBeExpanded ? 'expanded' : 'collapsed'} nav panel - saved preference`);
             
             // Update status indicator
             updateNavPanelStatus();
             
-            // Sandbox bar positioning handled by CSS classes
+            // Update sandbox bar position after state changes
+            if (window.updateSandboxBarPosition) {
+                window.updateSandboxBarPosition();
+            }
         }
 
         // Update nav panel status indicator
@@ -2649,8 +2766,12 @@
             }
         }
 
-        // Make sure toggleNavPanel is available globally
+        // Make functions available globally
         window.toggleNavPanel = toggleNavPanel;
+        window.restoreNavPanelPreferredState = restoreNavPanelPreferredState;
+        window.setNavPanelPreferredState = setNavPanelPreferredState;
+        window.getNavPanelPreferredState = getNavPanelPreferredState;
+        window.hasNavPanelPreference = hasNavPanelPreference;
 
         // Close navigation when clicking outside on mobile
         document.addEventListener('click', function(e) {
@@ -2662,10 +2783,18 @@
                 const clickedExpandButton = expandButton && expandButton.contains(e.target);
                 
                 if (!navPanel.contains(e.target) && !accountPanel.contains(e.target) && !clickedExpandButton) {
+                    // Close both panels but then restore nav panel to preferred state if account panel wasn't open
+                    const wasAccountPanelOpen = accountPanel.classList.contains('mobile-open');
+                    
                     navPanel.classList.remove('mobile-open');
                     accountPanel.classList.remove('mobile-open');
-                    // Reset restoration state when panels are closed by clicking outside
-                    previousNavPanelState = false;
+                    previousNavPanelState = false; // Reset immediate restoration
+                    
+                    // If only nav panel was open, restore it to preferred state after a brief delay
+                    if (!wasAccountPanelOpen) {
+                        debugLog('NavState', '👆 Clicked outside - restoring nav panel to preferred state');
+                        setTimeout(() => restoreNavPanelPreferredState(), 50);
+                    }
                 }
             }
         });
@@ -2686,28 +2815,32 @@
                 if (accountPanel.classList.contains('mobile-open')) {
                     accountPanel.classList.remove('mobile-open');
                     
-                    // If nav panel was previously open, restore it
+                    // Restore immediate previous state first, then fall back to preferred state
                     if (previousNavPanelState) {
                         navPanel.classList.add('mobile-open');
                         dashboard.classList.add('nav-panel-expanded');
                         expandButton.setAttribute('data-tooltip', 'Collapse');
                         previousNavPanelState = false;
+                        debugLog('NavState', '🔄 Restored nav panel from previous state on main content click (mobile)');
                     } else {
-                        expandButton.setAttribute('data-tooltip', 'Expand');
+                        // Restore to user's preferred state
+                        setTimeout(() => restoreNavPanelPreferredState(), 10);
                     }
                 }
             } else {
                 if (accountPanel.classList.contains('expanded')) {
                     accountPanel.classList.remove('expanded');
                     
-                    // If nav panel was previously expanded, restore it
+                    // Restore immediate previous state first, then fall back to preferred state
                     if (previousNavPanelState) {
                         navPanel.classList.add('expanded');
                         dashboard.classList.add('nav-panel-expanded');
                         expandButton.setAttribute('data-tooltip', 'Collapse');
                         previousNavPanelState = false;
+                        debugLog('NavState', '🔄 Restored nav panel from previous state on main content click (desktop)');
                     } else {
-                        expandButton.setAttribute('data-tooltip', 'Expand');
+                        // Restore to user's preferred state
+                        setTimeout(() => restoreNavPanelPreferredState(), 10);
                     }
                 }
             }
@@ -2782,20 +2915,31 @@
             const sandboxPopover = document.getElementById('sandboxPopover');
 
             if (createTrigger) {
-                createTrigger.addEventListener('mouseenter', function() {
+                // Use mouseenter/mouseleave for better reliability across nested elements
+                createTrigger.addEventListener('mouseenter', function(e) {
                     // Close other popovers first
                     hideAccountPopover();
                     hideSandboxPopover();
                     showCreatePopover(this);
                 });
                 
-                createTrigger.addEventListener('mouseleave', function() {
-                    // Add small delay to allow moving to popover
+                createTrigger.addEventListener('mouseleave', function(e) {
+                    // Only hide if mouse is truly leaving the component (not moving to child)
                     setTimeout(() => {
                         if (createPopover && !createPopover.matches(':hover') && !this.matches(':hover')) {
                             hideCreatePopover();
                         }
-                    }, 150);
+                    }, 100); // Reduced delay for more responsive interaction
+                });
+
+                // Additional safety: ensure hover works on all child elements
+                createTrigger.addEventListener('mouseover', function(e) {
+                    // Ensure popover shows even when hovering over child elements
+                    if (!createPopover.classList.contains('show')) {
+                        hideAccountPopover();
+                        hideSandboxPopover();
+                        showCreatePopover(this);
+                    }
                 });
             }
 
@@ -2806,25 +2950,36 @@
                         if (createTrigger && !createTrigger.matches(':hover') && !this.matches(':hover')) {
                             hideCreatePopover();
                         }
-                    }, 150);
+                    }, 100);
                 });
             }
 
             if (sandboxTrigger) {
-                sandboxTrigger.addEventListener('mouseenter', function() {
+                // Use mouseenter/mouseleave for better reliability across nested elements
+                sandboxTrigger.addEventListener('mouseenter', function(e) {
                     // Close other popovers first
                     hideAccountPopover();
                     hideCreatePopover();
                     showSandboxPopover(this);
                 });
                 
-                sandboxTrigger.addEventListener('mouseleave', function() {
-                    // Add small delay to allow moving to popover
+                sandboxTrigger.addEventListener('mouseleave', function(e) {
+                    // Only hide if mouse is truly leaving the component (not moving to child)
                     setTimeout(() => {
                         if (sandboxPopover && !sandboxPopover.matches(':hover') && !this.matches(':hover')) {
                             hideSandboxPopover();
                         }
-                    }, 150);
+                    }, 100); // Reduced delay for more responsive interaction
+                });
+
+                // Additional safety: ensure hover works on all child elements
+                sandboxTrigger.addEventListener('mouseover', function(e) {
+                    // Ensure popover shows even when hovering over child elements
+                    if (!sandboxPopover.classList.contains('show')) {
+                        hideAccountPopover();
+                        hideCreatePopover();
+                        showSandboxPopover(this);
+                    }
                 });
             }
 
@@ -2835,7 +2990,7 @@
                         if (sandboxTrigger && !sandboxTrigger.matches(':hover') && !this.matches(':hover')) {
                             hideSandboxPopover();
                         }
-                    }, 150);
+                    }, 100);
                 });
             }
         });
@@ -3582,7 +3737,11 @@
             const popover = document.getElementById('accountPopover');
             const accountSwitcher = document.getElementById('accountSwitcher');
             
-            // Set initial expand button tooltip text
+            // RESTORE NAV PANEL PREFERRED STATE ON PAGE LOAD
+            debugLog('NavState', '🚀 Page loaded - restoring nav panel preferred state');
+            setTimeout(() => restoreNavPanelPreferredState(), 100);
+            
+            // Set initial expand button tooltip text (will be updated by restoration)
             if (navPanel.classList.contains('expanded') || navPanel.classList.contains('mobile-open')) {
                 expandButton.setAttribute('data-tooltip', 'Collapse');
             } else {
@@ -3763,6 +3922,11 @@
             hideTooltip();
             // Update account switcher tooltip as truncation may change with window size
             updateAccountSwitcherTooltip();
+            
+            // RESTORE NAV PANEL PREFERRED STATE AFTER RESIZE
+            // This handles mobile/desktop layout transitions
+            debugLog('NavState', '📱 Window resized - restoring nav panel preferred state for new layout');
+            setTimeout(() => restoreNavPanelPreferredState(), 150);
         });
 
         // Update sandbox popover create buttons based on current context
@@ -5006,6 +5170,11 @@
         // Auto-cleanup on window focus (helps with edge cases where hover gets stuck)
         window.addEventListener('focus', function() {
             setTimeout(resetAccountPanelState, 100);
+            
+            // RESTORE NAV PANEL PREFERRED STATE ON FOCUS
+            // This helps with edge cases when returning to the tab
+            debugLog('NavState', '👁️ Window focused - ensuring nav panel preferred state');
+            setTimeout(() => restoreNavPanelPreferredState(), 200);
         });
     </script>
 </body>
