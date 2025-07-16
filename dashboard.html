@@ -28,9 +28,9 @@
         /* Left Navigation Panels */
         .nav-panel, .account-panel {
             background: #ffffff;
-            width: 65px;
+            width: 49px;
             height: 100vh;
-            padding: 16px 20px;
+            padding: 12px;
             transition: width 0.2s cubic-bezier(0.23, 1, 0.32, 1), margin-top 0.2s cubic-bezier(0.23, 1, 0.32, 1), height 0.2s cubic-bezier(0.23, 1, 0.32, 1);
             position: relative;
             display: flex;
@@ -67,7 +67,7 @@
         /* Expand Button Container */
         .expandButton-container {
             position: fixed;
-            left: 130px; /* 65px (account panel) + 65px (nav panel) + 8px offset - 8px container padding */
+            left: 114px; /* 49px (account panel) + 49px (nav panel) + 16px offset */
             top: 50%;
             transform: translateY(-50%);
             width: 24px; /* Increased for better click area */
@@ -507,15 +507,15 @@
         }
 
         .nav-panel.expanded ~ .expandButton-container {
-            left: 305px; /* 65px (account panel) + 240px (expanded nav panel) + 8px offset - 8px container padding */
+            left: 269px; /* 49px (account panel) + 220px (expanded nav panel) + 8px offset - 8px container padding */
         }
 
         .account-panel.expanded ~ .nav-panel ~ .expandButton-container {
-            left: 305px; /* 240px (expanded account panel) + 65px (nav panel) + 8px offset - 8px container padding */
+            left: 269px; /* 220px (expanded account panel) + 49px (nav panel) + 8px offset - 8px container padding */
         }
 
         .nav-panel.expanded, .account-panel.expanded {
-            width: 240px;
+            width: 220px;
         }
 
         .nav-panel.expanded {
@@ -795,8 +795,8 @@
         .sandbox-indicator-bar {
             position: fixed;
             top: 0;
-            left: 65px;  /* Start after collapsed account panel, extend over nav panel */
-            width: calc(100% - 65px);  /* Extend over nav panel and main content */
+            left: 49px;  /* Start after collapsed account panel, extend over nav panel */
+            width: calc(100% - 49px);  /* Extend over nav panel and main content */
             height: 32px;
             background-color: #0E3359;
             color: white;
@@ -814,8 +814,8 @@
 
         /* Adjust bar position when account panel is expanded */
         .dashboard.sandbox-mode.account-panel-expanded .sandbox-indicator-bar {
-            left: 240px;  /* Start after expanded account panel, extend over nav panel and main content */
-            width: calc(100% - 240px);  /* Extend over nav panel and main content */
+            left: 220px;  /* Start after expanded account panel, extend over nav panel and main content */
+            width: calc(100% - 220px);  /* Extend over nav panel and main content */
         }
 
         /* Adjust nav panel and main content when sandbox bar is visible */
