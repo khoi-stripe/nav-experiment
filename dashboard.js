@@ -1537,6 +1537,27 @@ class Dashboard {
             }
         });
         
+        // Add tooltip event listeners for the new account element
+        accountElement.addEventListener('mouseenter', function(e) {
+            const tooltipText = this.getAttribute('data-tooltip');
+            const parentPanel = this.closest('.nav-panel, .account-panel');
+            
+            // For navigation components, only show tooltip if panel is not expanded
+            if (parentPanel) {
+                if (!parentPanel.classList.contains('expanded') && !parentPanel.classList.contains('mobile-open')) {
+                    if (typeof showTooltip === 'function') {
+                        showTooltip(this, tooltipText);
+                    }
+                }
+            }
+        });
+        
+        accountElement.addEventListener('mouseleave', function(e) {
+            if (typeof hideTooltip === 'function') {
+                hideTooltip();
+            }
+        });
+        
         // Insert after the divider (with other business accounts)
         if (divider) {
             // Find the next element after the divider to insert before it

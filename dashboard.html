@@ -132,12 +132,39 @@
             font-size: 12px;
             white-space: nowrap;
             opacity: 0;
-            transition: opacity 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            transform: translateY(-50%);
+            transition: opacity 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            max-width: 300px;
+            word-wrap: break-word;
+            white-space: normal;
         }
 
         .tooltip-content.show {
             opacity: 1;
+        }
+
+        /* Position-specific transforms for smooth animations */
+        .tooltip-content[data-position="right"] {
+            transform: translateX(-4px);
+        }
+
+        .tooltip-content[data-position="left"] {
+            transform: translateX(4px);
+        }
+
+        .tooltip-content[data-position="top"] {
+            transform: translateY(4px);
+        }
+
+        .tooltip-content[data-position="bottom"] {
+            transform: translateY(-4px);
+        }
+
+        .tooltip-content.show[data-position="right"],
+        .tooltip-content.show[data-position="left"],
+        .tooltip-content.show[data-position="top"],
+        .tooltip-content.show[data-position="bottom"] {
+            transform: translate(0, 0);
         }
 
         /* Mobile - hide tooltips */
@@ -1833,15 +1860,86 @@
             const rect = element.getBoundingClientRect();
             
             content.textContent = text;
-            content.style.left = (rect.right + 8) + 'px';
-            content.style.top = (rect.top + rect.height / 2) + 'px';
             content.classList.add('show');
+            
+            // Get tooltip dimensions after showing it
+            const tooltipRect = content.getBoundingClientRect();
+            const viewport = {
+                width: window.innerWidth,
+                height: window.innerHeight
+            };
+            
+            // Calculate available space in each direction
+            const spaceRight = viewport.width - rect.right;
+            const spaceLeft = rect.left;
+            const spaceTop = rect.top;
+            const spaceBottom = viewport.height - rect.bottom;
+            
+            // Tooltip padding/margin
+            const margin = 8;
+            
+            let finalX, finalY;
+            let position = '';
+            
+            // Determine horizontal positioning
+            if (spaceRight >= tooltipRect.width + margin) {
+                // Place to the right (default)
+                finalX = rect.right + margin;
+                position = 'right';
+            } else if (spaceLeft >= tooltipRect.width + margin) {
+                // Place to the left
+                finalX = rect.left - tooltipRect.width - margin;
+                position = 'left';
+            } else {
+                // Center horizontally and place above or below
+                finalX = Math.max(margin, Math.min(
+                    viewport.width - tooltipRect.width - margin,
+                    rect.left + (rect.width - tooltipRect.width) / 2
+                ));
+                
+                if (spaceBottom >= tooltipRect.height + margin) {
+                    // Place below
+                    finalY = rect.bottom + margin;
+                    position = 'bottom';
+                } else if (spaceTop >= tooltipRect.height + margin) {
+                    // Place above
+                    finalY = rect.top - tooltipRect.height - margin;
+                    position = 'top';
+                } else {
+                    // Place below anyway, but constrain to viewport
+                    finalY = Math.min(viewport.height - tooltipRect.height - margin, rect.bottom + margin);
+                    position = 'bottom';
+                }
+            }
+            
+            // Determine vertical positioning for left/right placements
+            if (position === 'right' || position === 'left') {
+                // Try to center vertically on the element
+                finalY = rect.top + (rect.height - tooltipRect.height) / 2;
+                
+                // Constrain to viewport
+                finalY = Math.max(margin, Math.min(viewport.height - tooltipRect.height - margin, finalY));
+            }
+            
+            // Apply final positioning
+            content.style.left = finalX + 'px';
+            content.style.top = finalY + 'px';
+            
+            // Add position class for styling/arrows (if desired)
+            content.setAttribute('data-position', position);
         }
 
         function hideTooltip() {
             const tooltip = document.getElementById('globalTooltip');
             const content = tooltip.querySelector('.tooltip-content');
             content.classList.remove('show');
+            
+            // Clean up position attribute after transition
+            setTimeout(() => {
+                if (!content.classList.contains('show')) {
+                    content.removeAttribute('data-position');
+                }
+            }, 250);
         }
 
         // Function to check if text is truncated
