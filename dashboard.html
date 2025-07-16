@@ -37,16 +37,6 @@
             flex-direction: column;
             border-right: 1px solid #e0e0e0;
             box-sizing: border-box;
-            will-change: width;
-        }
-
-        /* Optimized nav panel transitions */
-        .nav-panel {
-            transform-origin: left center;
-            transition: width 0.2s cubic-bezier(0.165, 0.84, 0.44, 1), margin-top 0.2s cubic-bezier(0.165, 0.84, 0.44, 1), height 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
-            will-change: width;
-            backface-visibility: hidden;
-            perspective: 1000px;
         }
         
         /* Account Panel Specific Styling */
@@ -55,6 +45,7 @@
             padding: 12px 4px;
             border-right: none;
             cursor: pointer;
+            position: relative;
             transition: width 0.5s cubic-bezier(0.165, 0.84, 0.44, 1), padding 0.5s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.5s cubic-bezier(0.165, 0.84, 0.44, 1), border-right 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
             transition-delay: 0.3s;
             box-shadow: 12px 0 40px 4px rgba(0, 0, 0, 0.18), 6px 0 16px rgba(0, 0, 0, 0.12);
@@ -68,6 +59,30 @@
             box-shadow: 6px 0 16px rgba(0, 0, 0, 0.12), 2px 0 6px rgba(0, 0, 0, 0.08);
             transition: width 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), padding 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), border-right 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             transition-delay: 0s;
+        }
+
+        /* Darkening overlay for collapsed state only */
+        .account-panel::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            z-index: 1000;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .account-panel:not(:hover):not(.opened)::after {
+            opacity: 1;
+        }
+
+        .account-panel:hover::after,
+        .account-panel.opened::after {
+            opacity: 0;
         }
 
         .nav-panel {
@@ -674,24 +689,6 @@
         .account-panel .nav-component:hover::before,
         .account-panel .nav-component.popover-active::before {
             background-color: #e9ecef;
-        }
-
-        /* Complete page isolation during nav panel transition */
-        body.nav-transitioning {
-            pointer-events: none !important;
-            user-select: none !important;
-        }
-
-        body.nav-transitioning * {
-            pointer-events: none !important;
-            user-select: none !important;
-        }
-
-        /* Force hardware acceleration */
-        .nav-panel.transitioning {
-            will-change: width;
-            transform: translateZ(0);
-            backface-visibility: hidden;
         }
 
         /* Disable interactions when account panel is collapsed */
@@ -2489,35 +2486,17 @@
             if (window.innerWidth <= 768) {
                 // Close accountPanel if it's open
                 accountPanel.classList.remove('mobile-open');
-                document.body.classList.add('nav-transitioning');
-                navPanel.classList.add('transitioning');
                 navPanel.classList.toggle('mobile-open');
-                setTimeout(() => {
-                    navPanel.classList.remove('transitioning');
-                    document.body.classList.remove('nav-transitioning');
-                }, 220);
             } else {
                 if (navPanel.classList.contains('expanded')) {
                     // Close navPanel
-                    document.body.classList.add('nav-transitioning');
-                    navPanel.classList.add('transitioning');
                     navPanel.classList.remove('expanded');
                     dashboard.classList.remove('nav-panel-expanded');
-                    setTimeout(() => {
-                        navPanel.classList.remove('transitioning');
-                        document.body.classList.remove('nav-transitioning');
-                    }, 220);
             } else {
                 // Close accountPanel if it's open
                 accountPanel.classList.remove('expanded');
-                document.body.classList.add('nav-transitioning');
-                navPanel.classList.add('transitioning');
                 navPanel.classList.toggle('expanded');
                     dashboard.classList.add('nav-panel-expanded');
-                    setTimeout(() => {
-                        navPanel.classList.remove('transitioning');
-                        document.body.classList.remove('nav-transitioning');
-                    }, 220);
                 }
             }
             
