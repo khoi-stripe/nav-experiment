@@ -134,9 +134,7 @@
             opacity: 0;
             transition: opacity 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-            max-width: 300px;
-            word-wrap: break-word;
-            white-space: normal;
+            max-width: 500px;
         }
 
         .tooltip-content.show {
@@ -3402,12 +3400,22 @@
             const isInOrgSandbox = isInSandboxMode && activeSandboxType === 'organization';
             const hasSandboxAccountSelected = currentSandboxAccount !== null;
             
+            // Check if current account is part of an organization
+            const activeAccount = document.getElementById('active-account');
+            const hasOrganization = activeAccount && activeAccount.dataset.organization && 
+                                   activeAccount.dataset.organization !== 'undefined' && 
+                                   activeAccount.dataset.organization !== 'null';
+            
             // Override type based on context for better UX
             let contextualType = type;
             let targetAccount = null;
             
             if (isViewingAllAccounts && !hasSandboxAccountSelected) {
                 contextualType = 'organization';
+            } else if (hasOrganization && !isViewingAllAccounts) {
+                // Sub-account selected - always create organization sandboxes since sub-accounts share organization sandboxes
+                contextualType = 'organization';
+                console.log('Sub-account context detected - creating organization sandbox instead of account-specific');
             } else if (type === 'organization' && (!isViewingAllAccounts || hasSandboxAccountSelected)) {
                 // If trying to create org sandbox while viewing specific account, ask for confirmation
                 const confirmOrgSandbox = confirm('You are currently viewing a specific account. Do you want to create an organization-wide sandbox instead?');

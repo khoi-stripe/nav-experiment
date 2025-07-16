@@ -197,7 +197,7 @@ class Dashboard {
     saveAccountSandboxes() {
         this._debounce('saveAccount', () => {
             try {
-                localStorage.setItem('accountSandboxes', JSON.stringify(this.accountSandboxes));
+        localStorage.setItem('accountSandboxes', JSON.stringify(this.accountSandboxes));
             } catch (e) {
                 this._log('error', 'Failed to save account sandboxes to localStorage:', e);
             }
@@ -207,7 +207,7 @@ class Dashboard {
     saveOrganizationSandboxes() {
         this._debounce('saveOrg', () => {
             try {
-                localStorage.setItem('organizationSandboxes', JSON.stringify(this.organizationSandboxes));
+        localStorage.setItem('organizationSandboxes', JSON.stringify(this.organizationSandboxes));
             } catch (e) {
                 this._log('error', 'Failed to save organization sandboxes to localStorage:', e);
             }
@@ -374,10 +374,10 @@ class Dashboard {
         
         return templates.map((template, index) => ({
             name: `${accountName} ${template.name}`,
-            account: accountName,
-            type: 'account',
-            created: new Date().toISOString(),
-            lastUsed: null,
+                account: accountName,
+                type: 'account',
+                created: new Date().toISOString(),
+                lastUsed: null,
             id: `${accountSlug}-${template.name.toLowerCase().replace(/\s+/g, '-')}-${timestamp + index}`,
             description: `${template.desc} for ${accountName}`
         }));
@@ -422,10 +422,10 @@ class Dashboard {
         
         return templates.map((template, index) => ({
             name: `${orgName} ${template.name}`,
-            type: 'organization',
-            organizationId: organizationId,
+                type: 'organization',
+                organizationId: organizationId,
             accounts: orgAccounts.map(acc => ({ ...acc })),
-            created: new Date().toISOString(),
+                created: new Date().toISOString(),
             lastUsed: null,
             id: `${orgSlug}-${template.name.toLowerCase().replace(/\s+/g, '-')}-${timestamp + index}`,
             description: template.desc
@@ -575,14 +575,14 @@ class Dashboard {
                 const sandboxPopoverItem = this.createSandboxPopoverItem(sandbox, index);
                 popoverFragment.appendChild(sandboxPopoverItem);
             });
-            
-            // Insert before the divider container (if it exists)
+                
+                // Insert before the divider container (if it exists)
             const dividerContainer = popoverContentElement.querySelector('.sandbox-popover-divider-container');
-            if (dividerContainer) {
+                if (dividerContainer) {
                 popoverContentElement.insertBefore(popoverFragment, dividerContainer);
-            } else {
+                } else {
                 popoverContentElement.appendChild(popoverFragment);
-            }
+                }
             
             // Update animation delays for popover
             this.updatePopoverAnimationDelays(popoverContentElement);
@@ -634,8 +634,9 @@ class Dashboard {
                     return this.getOrganizationSandboxesForOrganization(organizationId);
                 } else if (accountSwitcherText) {
                     const specificAccountName = accountSwitcherText.textContent.replace(' (sandbox)', '');
-                    this._log('log', '📦 Showing account sandboxes for selected sub-account:', specificAccountName);
-                    return this.getSandboxesForAccount(specificAccountName);
+                    this._log('log', '📦 Sub-account selected - showing parent organization sandboxes instead of account-specific:', specificAccountName);
+                    this._log('log', '📦 Using parent organization sandboxes for sub-account:', organizationId);
+                    return this.getOrganizationSandboxesForOrganization(organizationId);
                 } else {
                     this._log('log', '📦 Showing account sandboxes for business account (fallback):', accountName);
                     return this.getSandboxesForAccount(accountName);
@@ -887,7 +888,7 @@ class Dashboard {
 
         const timestamp = new Date().getTime();
         const accountSlug = this.createAccountSlug(this.currentActiveAccount);
-        
+
         const newSandbox = {
             name: `${this.currentActiveAccount} - ${sandboxName}`,
             type: sandboxType,
@@ -1952,7 +1953,7 @@ function updateMainContent(selectedItem) {
     }
     
     updateMainContent._debounceTimer = setTimeout(() => {
-        const mainContent = document.querySelector('.content-wrapper');
+    const mainContent = document.querySelector('.content-wrapper');
         if (!mainContent) return;
         
         const timestamp = new Date().toLocaleTimeString();
