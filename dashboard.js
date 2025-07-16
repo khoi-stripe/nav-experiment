@@ -1465,73 +1465,87 @@ class Dashboard {
             return;
         }
         
-        // Find the settings component (last item) to insert before it
-        const settingsComponent = accountPanel.querySelector('[data-tooltip="Settings"]');
+        // Find the divider to insert new accounts after it
+        const divider = accountPanel.querySelector('.nav-divider');
         
-        accounts.forEach((account, index) => {
-            const accountElement = document.createElement('div');
-            accountElement.className = 'nav-component business-account';
-            accountElement.setAttribute('data-tooltip', account.name);
-            accountElement.setAttribute('data-account-name', account.name);
-            accountElement.setAttribute('data-account-initials', account.initials);
-            accountElement.setAttribute('data-account-color', account.color);
+        // Only create the main account in the account panel
+        const mainAccount = accounts[0];
+        const accountElement = document.createElement('div');
+        accountElement.className = 'nav-component business-account';
+        accountElement.setAttribute('data-tooltip', mainAccount.name);
+        accountElement.setAttribute('data-account-name', mainAccount.name);
+        accountElement.setAttribute('data-account-initials', mainAccount.initials);
+        accountElement.setAttribute('data-account-color', mainAccount.color);
+        
+        // If we have sub-accounts, make this an organization
+        if (subAccountCount > 0) {
+            accountElement.classList.add('organization');
+            const orgId = mainAccount.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            accountElement.setAttribute('data-organization', orgId);
             
-            // If this is the main account and we have sub-accounts, make it an organization
-            if (account.isMain && subAccountCount > 0) {
-                accountElement.classList.add('organization');
-                const orgId = account.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-                accountElement.setAttribute('data-organization', orgId);
-                
-                // Store sub-accounts in organization accounts structure
-                const subAccounts = accounts.slice(1).map(subAccount => ({
-                    name: subAccount.name,
-                    initials: subAccount.initials,
-                    color: subAccount.color
-                }));
-                
-                // Get existing organization accounts or create new structure
-                const existingOrgAccounts = window.organizationAccounts || {};
-                existingOrgAccounts[orgId] = subAccounts;
-                window.organizationAccounts = existingOrgAccounts;
+            // Store sub-accounts in organization accounts structure
+            const subAccounts = accounts.slice(1).map(subAccount => ({
+                name: subAccount.name,
+                initials: subAccount.initials,
+                color: subAccount.color
+            }));
+            
+            // Get existing organization accounts or create new structure
+            const existingOrgAccounts = window.organizationAccounts || {};
+            existingOrgAccounts[orgId] = subAccounts;
+            window.organizationAccounts = existingOrgAccounts;
+            
+            console.log(`✅ Created organization "${mainAccount.name}" with ${subAccounts.length} sub-accounts:`, subAccounts.map(a => a.name).join(', '));
+        }
+        
+        accountElement.innerHTML = `
+            <div class="icon">
+                <div class="accountAvatar ${mainAccount.color}">${mainAccount.initials}</div>
+            </div>
+            <span class="nav-text">${mainAccount.name}</span>
+        `;
+        
+        // Add click handler
+        accountElement.addEventListener('click', function(e) {
+            e.stopPropagation();
+            
+            if (this.id === 'active-account') {
+                return;
             }
             
-            accountElement.innerHTML = `
-                <div class="icon">
-                    <div class="accountAvatar ${account.color}">${account.initials}</div>
-                </div>
-                <span class="nav-text">${account.name}</span>
-            `;
-            
-            // Add click handler
-            accountElement.addEventListener('click', function(e) {
-                e.stopPropagation();
-                
-                if (this.id === 'active-account') {
-                    return;
+            const businessAccountElement = this.closest('.business-account');
+            if (businessAccountElement) {
+                if (window.isInSandboxMode) {
+                    window.exitSandboxMode();
                 }
-                
-                const businessAccountElement = this.closest('.business-account');
-                if (businessAccountElement) {
-                    if (window.isInSandboxMode) {
-                        window.exitSandboxMode();
-                    }
-                    window.updateActiveBusinessAccount(businessAccountElement);
-                    return;
-                }
-            });
-            
-            // Insert before settings or at the end
-            if (settingsComponent) {
-                accountPanel.insertBefore(accountElement, settingsComponent);
-            } else {
-                accountPanel.appendChild(accountElement);
+                window.updateActiveBusinessAccount(businessAccountElement);
+                return;
             }
         });
         
-        // Update account visibility to include new accounts
+        // Insert after the divider (with other business accounts)
+        if (divider) {
+            // Find the next element after the divider to insert before it
+            let nextSibling = divider.nextElementSibling;
+            if (nextSibling) {
+                accountPanel.insertBefore(accountElement, nextSibling);
+            } else {
+                // If divider is the last element, append after it
+                accountPanel.appendChild(accountElement);
+            }
+        } else {
+            // If no divider exists, append at the end
+            accountPanel.appendChild(accountElement);
+        }
+        
+        // Update account visibility to include new account
         this.updateAccountVisibility();
         
-        console.log(`✅ Created ${accounts.length} business accounts: ${accounts.map(a => a.name).join(', ')}`);
+        if (subAccountCount > 0) {
+            console.log(`✅ Created organization account: ${mainAccount.name} (${subAccountCount} sub-accounts accessible via account switcher)`);
+        } else {
+            console.log(`✅ Created standalone business account: ${mainAccount.name}`);
+        }
     }
 
     openCreateAccountModal() {
